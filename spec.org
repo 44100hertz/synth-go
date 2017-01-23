@@ -1,0 +1,61 @@
+* GBA Specs
+** CPU/RAM
+ - ARM7TDMI @ 16.78 MHz, Zilog Z80 @ 8 or 4 MHz
+ - 32 KB internal, 256 KB external, 96 KB VRAM
+
+** Video
+ - TFT LCD, 240 × 160 pixels, 15-bit RGB color
+ - Four 4bpp or 256-color 2^n size square canvases that draw 8x8 tiles
+ - Tiles drawn onscreen
+   - Tile memory stores the location of all onscreen tiles
+   - Scroll offset controls location of screen on tilemap
+   - BG can be given affine transform
+ - OAM "object attribute memory" is transformable, automatically-drawn sprites
+   - Stores position, size, flipping flag, depth priority 0-4
+   - Sprites are rotated/scaled/sheared using affine matrix
+ - Two 256-color palettes
+ - Builtin graphical effects
+   - Mosaic pixelization effect, per-sprite or per-layer
+   - Blending; fade to white, fade to black, and alpha blend
+   - Windowing; allows the screen to be divided into areas
+
+** Audio
+*** GBC
+ 1. Square with sweep, len, duty, env, freq, on
+ 2. Square with len, duty, env, freq, on
+ 3. Custom 64-bit (16x4bit) Wave
+ 4. Noise with len, vol, env, freq, on
+Separate table for left volume, right volume,
+left and right volume of each channel.
+
+*** GBA
+Two stereo mixers for point-resampled direct stereo channels.
+
+** Misc
+ - 128 Sprites made out of tiles
+ - DMA; "Direct memory access"
+   - Halts the CPU and allows data to be copied quickly, mostly for sound and video.
+   - Can be triggered by HSYNC for graphical effects
+   - 0 - high-priority
+   - 1 and 2 - Sound
+   - 3 - General purpose
+ - Timers; various power-of-two cycle counters
+ - Interrupts; switching execution to some given code on an event, before switching back
+ - BIOS calls for system operations, other common operations, music playback
+
+** Input
+ - "10 keys" in order: L R down up left right start select B A
+
+* LANP Requirements
+** Tilemap
+64x32 isometric tiles on a 400x240 screen; 7x8 tiles fit.
+This gives 112 tiles per filled layer.
+
+* Video
+** Tilemap
+
+** Objects
+Sprites of any size drawn onscreen in individual draw calls.
+Can have text accompanying each the object aswell.
+
+* Audio
