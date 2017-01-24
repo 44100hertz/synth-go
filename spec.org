@@ -46,16 +46,32 @@ Two stereo mixers for point-resampled direct stereo channels.
 ** Input
  - "10 keys" in order: L R down up left right start select B A
 
-* LANP Requirements
-** Tilemap
-64x32 isometric tiles on a 400x240 screen; 7x8 tiles fit.
-This gives 112 tiles per filled layer.
-
 * Video
-** Tilemap
-
-** Objects
-Sprites of any size drawn onscreen in individual draw calls.
-Can have text accompanying each the object aswell.
-
 * Audio
+Wavetable pairs with envelope, FIR rectangular filter, and delay line.
+Any size wave bank, but be aware: it's always loaded into memory.
+** Modes
+ - Stereo :: Play one sample in each channel.
+ - PM :: Wave out left -> Phase right.
+ - AM :: Wave out left -> Amplitude right.
+ - Hard Sync :: Phase left -> Phase right.
+** Params
+ - Mode
+ - Volume, slide
+ - LFO; volume, speed, mode (tremolo, vibrato, off)
+ - Wave offset, length
+ - Pitch, slide
+ - FIR pitch, slide, length 2^n, influence
+ - Delay offset, volume
+ - Delay volume
+ - Loop mode (0=off, 1=forward, 2=pingpong)
+ - Delay mode (0=off, 1=normal, 2=pingpong)
+** Lazy FIR
+An extremely lazy FIR filter. Stores 2^n values, uses a rolling average.
+Will not store more than one value per sample; speed limited by sample rate.
+Should not actually suck because it's pitched, so produces harmonic noises.
+"Lazy" because doesn't recalculate anything when the pitch changes.
+** Delay line
+Simply samples a single previous value.
+* Input
+* Misc
