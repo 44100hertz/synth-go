@@ -16,7 +16,7 @@ func sineLUT_maker(off float64) int16 {
 	// Set range to 1/4 sine wave
 	off = off * math.Pi / 2.0
 	// Convert to 16-bit range
-	return int16(math.Sin(off) * float64(0x4000*2))
+	return int16(math.Sin(off) * float64(math.MaxInt16))
 }
 
 // Size of the lookup table to generate
