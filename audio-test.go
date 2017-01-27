@@ -3,15 +3,11 @@
  */
 package main
 
-func main() {
-	// Return a pulse for producing square waves.
-	getWave := func(offset int32) int8 {
-		if offset < 127 {
-			return -128
-		}
-		return 127
-	}
+import (
+	"./audio/"
+)
 
+func main() {
 	// Fill the sequence channel with a sequence C4->C5
 	getSeq := func(seq chan int) {
 		for i := 60; i < 72; i++ {
@@ -20,7 +16,9 @@ func main() {
 		close(seq)
 	}
 
-	/* Initialize mixer data with wave and sequence */
+	// Initialize mixer data with wave and sequence
+	context := mixer.Context{Seq: getSeq, Wave: waves.Sine}
+	context.Init()
 	/* Start the mixer running */
 	/* Print the mixer's output wave */
 }
