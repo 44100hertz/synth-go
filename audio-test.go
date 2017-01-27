@@ -1,10 +1,8 @@
-/* This is a testbed main for getting sound out of the mixer.
- * It is designed for ear tests.
- */
 package main
 
 import (
-	"./audio/"
+	"./audio"
+	"fmt"
 )
 
 func main() {
@@ -17,8 +15,11 @@ func main() {
 	}
 
 	// Initialize mixer data with wave and sequence
-	context := mixer.Context{Seq: getSeq, Wave: waves.Sine}
-	context.Init()
+	output := make(chan int16)
+	audio.Init(getSeq, audio.Sine, output)
+
 	/* Start the mixer running */
-	/* Print the mixer's output wave */
+	for i := 0; i < 100; i++ {
+		fmt.Println(<-output)
+	}
 }

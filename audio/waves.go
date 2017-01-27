@@ -1,4 +1,4 @@
-package waves
+package audio
 
 import "math"
 
