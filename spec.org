@@ -48,30 +48,32 @@ Two stereo mixers for point-resampled direct stereo channels.
 
 * Video
 * Audio
-Wavetable pairs with envelope, FIR rectangular filter, and delay line.
-Any size wave bank, but be aware: it's always loaded into memory.
-** Modes
- - Stereo :: Play one sample in each channel.
- - PM :: Wave out left -> Phase right.
- - AM :: Wave out left -> Amplitude right.
- - Hard Sync :: Phase left -> Phase right.
-** Params
- - Mode
- - Volume, slide
- - LFO; volume, speed, mode (tremolo, vibrato, off)
- - Wave offset, length
- - Pitch, slide
- - FIR pitch, slide, length 2^n, influence
+** Tech
+Wavetable pairs with envelope, rectangular FIR, and delay line. Has Stereo,
+Phase modulation, Amplitude modulation, and Sync modes.
+*** FIR
+An extremely lazy FIR. Stores 2^n values, uses a rolling average. Will
+not store more than one value per sample; speed limited by sample rate. Should
+not actually suck because it's pitched, so produces harmonic noises. "Lazy"
+because doesn't recalculate anything when the pitch changes.
+*** Delay line
+Samples a single previous point, and mixes it in later.
+** API
+Every channel pair has a set of playback parameters. They are updated every tick
+using a callback that passes in song data. Wave data also uses a callback.
+*** Pair params
+ - Mode (Stereo, PM, AM, Sync)
+ - Raw mode
+*** Channel params
+ - Wave index, offset, length. Passed to wave callback, length used
+   for looping.
+ - Volume, slide. Affects effects.
+ - Mixer Volume, slide. Applied after effects.
+ - Note Pitch, slide
+ - LFO; level, speed, mode (volume(T), pitch(V), both, off)
+ - FIR pitch, slide, length 2^n, level
  - Delay offset, volume
- - Delay volume
- - Loop mode (0=off, 1=forward, 2=pingpong)
- - Delay mode (0=off, 1=normal, 2=pingpong)
-** Lazy FIR
-An extremely lazy FIR filter. Stores 2^n values, uses a rolling average.
-Will not store more than one value per sample; speed limited by sample rate.
-Should not actually suck because it's pitched, so produces harmonic noises.
-"Lazy" because doesn't recalculate anything when the pitch changes.
-** Delay line
-Simply samples a single previous value.
+ - Loop mode (off, normal, swap)
+ - Delay mode (off, forward, pingpong)
 * Input
 * Misc
