@@ -16,10 +16,10 @@ func main() {
 
 	// Initialize mixer data with wave and sequence
 	output := make(chan int16)
-	audio.Init(getSeq, audio.Sine, output)
+	go audio.Init(getSeq, audio.Sine, output)
 
 	/* Start the mixer running */
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 16; i++ {
 		fmt.Println(<-output)
 	}
 }
