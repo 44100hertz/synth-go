@@ -3,31 +3,32 @@ package audio
 import "math"
 
 // The number of channel pairs, or mixer chans
-const numChans int = 4
+const NumChans int = 4
 
 type Mixer struct {
 	srate    int
 	seq      func(chan int)
 	wave     func(int) int16
-	channels *[numChans * 2]Channel
-	chans    *[numChans](chan int16)
+	channels *[NumChans * 2]Channel
+	chans    *[NumChans](chan int16)
 	count    uint64
 	nextTick uint64
 }
 
 // A single playback channel. Every even channel is "L", odd "R"
 type Channel struct {
-	phase, period,
-	off, len int
+	phase, period, off, len int
 }
 
 // Start up the parts of a context that a user needn't touch.
 func Init(seq func(chan int), wave func(int) int16, output chan int16) {
-	m := new(Mixer)
-	m.srate = 48000
-	m.seq = seq
-	m.channels = new([numChans * 2]Channel)
-	m.chans = new([numChans]chan int16)
+	m := Mixer{
+		srate:    48000,
+		seq:      seq,
+		wave:     wave,
+		channels: new([NumChans * 2]Channel),
+		chans:    new([NumChans]chan int16),
+	}
 
 	for i := range m.chans {
 		m.chans[i] = make(chan int16)
