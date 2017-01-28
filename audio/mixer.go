@@ -13,6 +13,8 @@ type Mixer struct {
 	chans    *[NumChans](chan int16)
 	count    uint64
 	nextTick uint64
+	bpm      uint16
+	tickrate uint8
 }
 
 // A single playback channel. Every even channel is "L", odd "R"
@@ -28,6 +30,8 @@ func Init(seq func(chan int), wave func(int) int16, output chan int16) {
 		wave:     wave,
 		channels: new([NumChans * 2]Channel),
 		chans:    new([NumChans]chan int16),
+		bpm:      120,
+		tickrate: 4,
 	}
 
 	for i := range m.chans {
@@ -36,6 +40,13 @@ func Init(seq func(chan int), wave func(int) int16, output chan int16) {
 	}
 
 	for {
+		if m.count == m.nextTick {
+			m.nextTick = uint64(60.0*float64(m.srate)/
+				float64(m.bpm)/float64(m.tickrate) + float64(m.count))
+			for _, c := range m.channels {
+				c.period = m.getPointPeriod(c.len, 60)
+			}
+		}
 		var mix int32 = 0
 		for i := range m.chans {
 			mix += int32(<-m.chans[i])
@@ -49,7 +60,6 @@ func Init(seq func(chan int), wave func(int) int16, output chan int16) {
 func (m Mixer) startPair(i int) {
 	l := m.channels[i*2]
 	l.len = 0x8000
-	l.period = m.getPointPeriod(l.len, 60)
 	for {
 		l.phase = (l.phase + l.period) % (l.len)
 		m.chans[i] <- m.wave(l.phase)
