@@ -1,3 +1,7 @@
+/* audio waves
+ * Some fast builtin waves to make things easier, and to provide examples.
+ */
+
 package audio
 
 import "math"
@@ -89,4 +93,24 @@ func Ramp(off int) int16 {
 		return int16(off / 2)
 	}
 	return 0
+}
+
+// General wave getting function
+func Waves(index int, off int) int16 {
+	switch index {
+	case 0:
+		return Sine(off)
+	case 1:
+		return HalfSine(off)
+	case 2:
+		return CamelSine(off)
+	case 3:
+		return QuarterSine(off)
+	case 4:
+		return Pulse(off)
+	case 5:
+		return Ramp(off)
+	default:
+		return Sine(off)
+	}
 }
