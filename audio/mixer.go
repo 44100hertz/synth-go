@@ -14,7 +14,7 @@ type Mixer struct {
 	count    uint64
 	nextTick uint64
 	bpm      uint16
-	tickrate uint8
+	tickrate uint16
 }
 
 // A single playback channel. Every even channel is "L", odd "R"
