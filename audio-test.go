@@ -2,7 +2,6 @@ package main
 
 import (
 	"./audio"
-	"fmt"
 )
 
 func main() {
@@ -19,7 +18,7 @@ func main() {
 	go audio.Init(getSeq, audio.Sine, output)
 
 	/* Start the mixer running */
-	for i := 0; i < 16; i++ {
-		fmt.Println(<-output)
+	for i := 0; i < 480000; i++ {
+		<-output
 	}
 }
