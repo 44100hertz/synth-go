@@ -11,43 +11,43 @@ import "math"
 const NumChans int = 4
 
 type Mixer struct {
-	srate    int
-	seq      chan int
-	wave     func(int, int) int16
-	channel  *[NumChans * 2]Channel
-	chans    *[NumChans](chan int16)
-	count    int
-	nextTick int
-	bpm      int
-	tickrate int
+	// Passed-in, user-controlled params
+	wave func(int, int) int16
+	inst []Inst
+
+	// Calculated values
+	srate   int
+	channel *[NumChans * 2]Channel
+	chans   *[NumChans](chan int16)
+	count, tickCount,
+	bpm, nextTick,
+	tickRate, tickSpeed int
 }
 
-// A single playback channel. Every even channel is "L", odd "R"
+// Internal channel data
 type Channel struct {
-	instIndex,
-	phase, period, len,
+	index, len,
+	phase, period,
 	note int
-	inst [3]Inst
+	inst *[3]int
 }
 
 // A public way to modify instrument data
 type Inst struct {
-	WaveIndex,
-	WaveLength,
-	Note,
-	LoopMode interface{}
+	Index, Len interface{}
 }
 
-// Start up the parts of a context that a user needn't touch.
-func Init(seq chan int, wave func(int, int) int16, output chan int16) {
+// Create and run a mixer
+func Init(wave func(int, int) int16, inst []Inst, output chan int16) {
 	m := Mixer{
-		srate:    48000,
-		seq:      seq,
-		wave:     wave,
-		channel:  new([NumChans * 2]Channel),
-		chans:    new([NumChans]chan int16),
-		bpm:      120,
-		tickrate: 1,
+		wave:      wave,
+		channel:   new([NumChans * 2]Channel),
+		chans:     new([NumChans]chan int16),
+		inst:      inst,
+		srate:     48000,
+		bpm:       120,
+		tickRate:  1,
+		tickSpeed: 1,
 	}
 
 	for i := range m.chans {
@@ -58,9 +58,13 @@ func Init(seq chan int, wave func(int, int) int16, output chan int16) {
 	for {
 		if m.count == m.nextTick {
 			for i := range m.chans {
-				m.loadInst(i,1)
+				m.loadInst(i, 0)
 			}
-			m.nextTick = 60*m.srate/m.bpm/m.tickrate + m.count
+			m.nextTick = 60*m.srate/m.bpm/m.tickRate + m.count
+			m.tickCount++
+		}
+		if m.tickCount == m.tickSpeed {
+			// Load sequence data here
 		}
 		var mix int32 = 0
 		for i := range m.chans {
@@ -76,6 +80,7 @@ func (m *Mixer) startPair(i int) {
 	l := m.channel[i*2]
 	l.len = 0x8000
 	l.note = 60
+	l.inst = new([3]int)
 	for {
 		l.phase = (l.phase + l.period) % (l.len)
 		m.chans[i] <- m.wave(0, l.phase) // Sine wave
@@ -89,18 +94,12 @@ func (m *Mixer) getPointPeriod(len int, note int) int {
 	return int(rate * pitch)
 }
 
-func instGetInt(i interface{}, modval *int) {
-	integer, ok := i.(int)
-	if ok {
-		*modval = integer
-	}
-}
-
+// Load instrument data once
 func (m *Mixer) loadInst(index int, instpart int) {
 	c := &m.channel[index]
-	i := &c.inst[instpart]
+	i := m.inst[0]
+//	i := &m.inst[c.inst[instpart]]
 	c.phase = 0
 	c.period = m.getPointPeriod(c.len, c.note)
-	instGetInt(i.WaveLength, &c.len)
-	c.note = <- m.seq
+	c.len = i.Len.(int) // Todo: make optional
 }
