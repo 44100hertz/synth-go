@@ -27,10 +27,12 @@ func callback(userdata unsafe.Pointer, stream *C.Uint8, length C.int) {
 	hdr := reflect.SliceHeader{Data: uintptr(unsafe.Pointer(stream)), Len: n, Cap: n}
 	buf := *(*[]C.Uint8)(unsafe.Pointer(&hdr))
 
-	channel := *(*chan int)(userdata)
-	for i := 0; i < n; i++ {
-		buf[i] = C.Uint8(<-channel >> 8)
-		buf[i+1] = C.Uint8(<-channel & 0x00ff)
+	//	channel := *(*chan int)(userdata)
+	for i := 0; i < n; i += 2 {
+		//		buf[i] = C.Uint8(<-channel >> 8)
+		//		buf[i+1] = C.Uint8(<-channel & 0x00ff)
+		buf[i] = 0xff
+		buf[i+1] = 0x7f
 	}
 }
 
@@ -58,14 +60,11 @@ func main() {
 		samples:  C.Uint16(bufSize),
 		channels: 1,
 		callback: C.SDL_AudioCallback(C.callback),
-		userdata: unsafe.Pointer(&output),
+		//		userdata: unsafe.Pointer(&output),
 	}
 	var have C.SDL_AudioSpec
 
-	dev, err := C.SDL_OpenAudioDevice(nil, C.int(0), &want, &have, C.int(0))
-	if err != nil {
-		panic(err)
-	}
+	dev := C.SDL_OpenAudioDevice(nil, 0, &want, &have, 0)
 	C.SDL_PauseAudioDevice(dev, 0)
 	time.Sleep(1 * time.Second)
 	C.SDL_CloseAudioDevice(dev)
