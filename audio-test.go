@@ -20,6 +20,13 @@ import (
 	"./audio"
 )
 
+var instr []audio.Inst = []audio.Inst{
+	{Index: 0, Len: 0x8000},
+	{Index: nil, Len: nil},
+	{Index: nil, Len: nil},
+}
+var output chan int16 = make(chan int16)
+
 //export callback
 func callback(userdata unsafe.Pointer, stream *C.Uint8, length C.int) {
 	// Lifted partially from SDL2 audio.go
@@ -27,28 +34,14 @@ func callback(userdata unsafe.Pointer, stream *C.Uint8, length C.int) {
 	hdr := reflect.SliceHeader{Data: uintptr(unsafe.Pointer(stream)), Len: n, Cap: n}
 	buf := *(*[]C.Uint8)(unsafe.Pointer(&hdr))
 
-	//	channel := *(*chan int)(userdata)
 	for i := 0; i < n; i += 2 {
-		//		buf[i] = C.Uint8(<-channel >> 8)
-		//		buf[i+1] = C.Uint8(<-channel & 0x00ff)
-		buf[i] = 0xff
-		buf[i+1] = 0x7f
+		buf[i] = C.Uint8(<-output >> 8)
+		buf[i+1] = C.Uint8(<-output & 0x00ff)
 	}
 }
 
 // Temporary SDL code is in main first as not to clutter things
 func main() {
-	// Fill the sequence channel with a sequence C4->C5
-	instr := []audio.Inst{
-		{Index: 0, Len: 0xffff},
-		{Index: nil, Len: nil},
-		{Index: nil, Len: nil},
-	}
-
-	output := make(chan int16)
-
-	// Start the mixer running
-	go audio.Init(audio.Waves, instr, output)
 	C.SDL_Init(C.SDL_INIT_AUDIO)
 	defer C.SDL_Quit()
 
@@ -60,9 +53,9 @@ func main() {
 		samples:  C.Uint16(bufSize),
 		channels: 1,
 		callback: C.SDL_AudioCallback(C.callback),
-		//		userdata: unsafe.Pointer(&output),
 	}
 	var have C.SDL_AudioSpec
+	go audio.Init(audio.Waves, instr, output)
 
 	dev := C.SDL_OpenAudioDevice(nil, 0, &want, &have, 0)
 	C.SDL_PauseAudioDevice(dev, 0)
