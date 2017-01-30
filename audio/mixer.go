@@ -86,9 +86,9 @@ func (m *Mixer) startPair(i int) {
 
 // Calculate amount to add to phase to produce a given pitch
 func (m *Mixer) getPointPeriod(len uint64, note int) uint64 {
-	rate := float64(len) / float64(m.srate) // pp needed for 1hz wave
-	pitch := math.Pow(2, float64(note-60)) * 440
-	return uint64(rate * pitch)
+	rate := float64(len>>11) / float64(m.srate) // pp needed for 1hz wave
+	pitch := math.Pow(2, float64(note-60)/12.0) * 440
+	return uint64(rate*pitch) << 11
 }
 
 // Load instrument data once
