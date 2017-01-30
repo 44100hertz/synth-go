@@ -7,8 +7,6 @@ package audio
 
 import "math"
 
-//import "fmt"
-
 // The number of channel pairs, or mixer chans
 const NumChans int = 4
 
@@ -59,8 +57,7 @@ func Init(wave func(int, uint32) int16, inst []Inst, output chan int16) {
 
 	for {
 		if m.count == m.nextTick {
-			m.nextTick = 60*m.srate/m.bpm/m.tickRate + m.count
-			m.tickCount++
+			m.tick()
 		}
 		if m.tickCount == m.tickSpeed {
 			// Load sequence data here
@@ -74,9 +71,18 @@ func Init(wave func(int, uint32) int16, inst []Inst, output chan int16) {
 	}
 }
 
+func (m *Mixer) tick() {
+	m.nextTick = 60*m.srate/m.bpm/m.tickRate + m.count
+	m.tickCount++
+	for i := range m.channel {
+		c := &m.channel[i]
+		c.period = m.getPointPeriod(c.len, c.note)
+	}
+}
+
 // Update a pair of channels
 func (m *Mixer) startPair(i int) {
-	l := m.channel[i*2]
+	l := &m.channel[i*2]
 	l.inst = new([3]int)
 	for {
 		l.phase = (l.phase + l.period) % l.len
@@ -86,7 +92,7 @@ func (m *Mixer) startPair(i int) {
 
 // Calculate amount to add to phase to produce a given pitch
 func (m *Mixer) getPointPeriod(len uint64, note int) uint64 {
-	rate := float64(len>>11) / float64(m.srate) // pp needed for 1hz wave
+	rate := float64(len>>11) / float64(m.srate) // point period for 1hz wave
 	pitch := math.Pow(2, float64(note-60)/12.0) * 440
 	return uint64(rate*pitch) << 11
 }
@@ -98,5 +104,4 @@ func (m *Mixer) loadInst(index int, instpart int) {
 	//	i := &m.inst[c.inst[instpart]]
 	c.len = uint64(i.Len.(int)) << 32 // Todo: make optional
 	c.note = 60
-	c.period = m.getPointPeriod(c.len, c.note)
 }
