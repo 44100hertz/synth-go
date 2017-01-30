@@ -21,7 +21,7 @@ import (
 )
 
 var instr []audio.Inst = []audio.Inst{
-	{Index: 0, Len: 0x8000},
+	{Index: 0, Len: 0xffff},
 	{Index: nil, Len: nil},
 	{Index: nil, Len: nil},
 }
@@ -35,8 +35,9 @@ func callback(userdata unsafe.Pointer, stream *C.Uint8, length C.int) {
 	buf := *(*[]C.Uint8)(unsafe.Pointer(&hdr))
 
 	for i := 0; i < n; i += 2 {
-		buf[i] = C.Uint8(<-output >> 8)
-		buf[i+1] = C.Uint8(<-output & 0x00ff)
+		nextSamp := <-output
+		buf[i] = C.Uint8(nextSamp & 0xff)
+		buf[i+1] = C.Uint8(nextSamp >> 8)
 	}
 }
 
@@ -59,6 +60,6 @@ func main() {
 
 	dev := C.SDL_OpenAudioDevice(nil, 0, &want, &have, 0)
 	C.SDL_PauseAudioDevice(dev, 0)
-	time.Sleep(1 * time.Second)
+	time.Sleep(time.Second)
 	C.SDL_CloseAudioDevice(dev)
 }

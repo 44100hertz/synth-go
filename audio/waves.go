@@ -8,9 +8,10 @@ import "math"
 
 // Generate any sort of 16-bit lookup table.
 // fn expected to take in range 0.0-1.0, output full-range int16
-func makeLUT(fn func(float64) int16, size int) []int16 {
+func makeLUT(fn func(float64) int16, size uint32) []int16 {
 	lut := make([]int16, size)
-	for i := 0; i < size; i++ {
+	var i uint32
+	for i = 0; i < size; i++ {
 		lut[i] = fn(float64(i) / float64(size))
 	}
 	return lut
@@ -25,12 +26,12 @@ func sineLUT_maker(off float64) int16 {
 
 // Size of the lookup table to generate
 // All waveforms will use by this size * 4
-const lutSize int = 0x4000
+const lutSize uint32 = 0x4000
 
 var lut []int16 = makeLUT(sineLUT_maker, lutSize)
 
 // ∿∿∿∿
-func Sine(off int) int16 {
+func Sine(off uint32) int16 {
 	o := off % lutSize
 	switch off / lutSize {
 	case 0:
@@ -46,7 +47,7 @@ func Sine(off int) int16 {
 }
 
 // n_n_
-func HalfSine(off int) int16 {
+func HalfSine(off uint32) int16 {
 	o := off % lutSize
 	switch off / lutSize {
 	case 0:
@@ -58,7 +59,7 @@ func HalfSine(off int) int16 {
 }
 
 // nnnn
-func CamelSine(off int) int16 {
+func CamelSine(off uint32) int16 {
 	o := off % lutSize
 	switch off / lutSize {
 	case 0, 2:
@@ -70,7 +71,7 @@ func CamelSine(off int) int16 {
 }
 
 // r_r_
-func QuarterSine(off int) int16 {
+func QuarterSine(off uint32) int16 {
 	o := off % lutSize
 	switch off / lutSize {
 	case 0, 2:
@@ -80,7 +81,7 @@ func QuarterSine(off int) int16 {
 }
 
 // ΓLΓL
-func Pulse(off int) int16 {
+func Pulse(off uint32) int16 {
 	if off > lutSize*2 {
 		return 0x7fff
 	}
@@ -88,7 +89,7 @@ func Pulse(off int) int16 {
 }
 
 // /|/|
-func Ramp(off int) int16 {
+func Ramp(off uint32) int16 {
 	if off < lutSize*4 {
 		return int16(off / 2)
 	}
@@ -96,7 +97,7 @@ func Ramp(off int) int16 {
 }
 
 // General wave getting function
-func Waves(index int, off int) int16 {
+func Waves(index int, off uint32) int16 {
 	switch index {
 	case 0:
 		return Sine(off)

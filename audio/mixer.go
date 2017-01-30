@@ -7,12 +7,14 @@ package audio
 
 import "math"
 
+//import "fmt"
+
 // The number of channel pairs, or mixer chans
 const NumChans int = 4
 
 type Mixer struct {
 	// Passed-in, user-controlled params
-	wave func(int, int) int16
+	wave func(int, uint32) int16
 	inst []Inst
 
 	// Calculated values
@@ -26,10 +28,9 @@ type Mixer struct {
 
 // Internal channel data
 type Channel struct {
-	index, len,
-	phase, period,
-	note int
-	inst *[3]int
+	index, note        int
+	len, phase, period uint64 // Top 32 bits are used, bottom 32 are like a counter
+	inst               *[3]int
 }
 
 // A public way to modify instrument data
@@ -38,7 +39,7 @@ type Inst struct {
 }
 
 // Create and run a mixer
-func Init(wave func(int, int) int16, inst []Inst, output chan int16) {
+func Init(wave func(int, uint32) int16, inst []Inst, output chan int16) {
 	m := Mixer{
 		wave:      wave,
 		channel:   new([NumChans * 2]Channel),
@@ -52,14 +53,12 @@ func Init(wave func(int, int) int16, inst []Inst, output chan int16) {
 
 	for i := range m.chans {
 		m.chans[i] = make(chan int16)
+		m.loadInst(i, 0)
 		go m.startPair(i)
 	}
 
 	for {
 		if m.count == m.nextTick {
-			for i := range m.chans {
-				m.loadInst(i, 0)
-			}
 			m.nextTick = 60*m.srate/m.bpm/m.tickRate + m.count
 			m.tickCount++
 		}
@@ -78,28 +77,26 @@ func Init(wave func(int, int) int16, inst []Inst, output chan int16) {
 // Update a pair of channels
 func (m *Mixer) startPair(i int) {
 	l := m.channel[i*2]
-	l.len = 0x8000
-	l.note = 60
 	l.inst = new([3]int)
 	for {
-		l.phase = (l.phase + l.period) % (l.len)
-		m.chans[i] <- m.wave(0, l.phase) // Sine wave
+		l.phase = (l.phase + l.period) % l.len
+		m.chans[i] <- m.wave(0, uint32(l.phase>>32)) // Sine wave
 	}
 }
 
 // Calculate amount to add to phase to produce a given pitch
-func (m *Mixer) getPointPeriod(len int, note int) int {
-	rate := float64(len) / float64(m.srate)
+func (m *Mixer) getPointPeriod(len uint64, note int) uint64 {
+	rate := float64(len) / float64(m.srate) // pp needed for 1hz wave
 	pitch := math.Pow(2, float64(note-60)) * 440
-	return int(rate * pitch)
+	return uint64(rate * pitch)
 }
 
 // Load instrument data once
 func (m *Mixer) loadInst(index int, instpart int) {
-	c := &m.channel[index]
+	c := &m.channel[index*2]
 	i := m.inst[0]
-//	i := &m.inst[c.inst[instpart]]
-	c.phase = 0
+	//	i := &m.inst[c.inst[instpart]]
+	c.len = uint64(i.Len.(int)) << 32 // Todo: make optional
+	c.note = 60
 	c.period = m.getPointPeriod(c.len, c.note)
-	c.len = i.Len.(int) // Todo: make optional
 }
