@@ -1,7 +1,16 @@
 package main
 
-// typedef unsigned char Uint8;
-// void callback(void *userdata, Uint8 *stream, int len);
+/*
+typedef unsigned char Uint8;
+void callback(void *userdata, Uint8 *stream, int len);
+#include <SDL2/SDL.h>
+#ifdef _WIN32
+
+#else
+  #cgo CFLAGS : -I/usr/include/SDL2 -D_REENTRANT
+  #cgo LDFLAGS : -lSDL2
+#endif
+*/
 import "C"
 import (
 	"reflect"
@@ -9,7 +18,6 @@ import (
 	"unsafe"
 
 	"./audio"
-	"github.com/veandco/go-sdl2/sdl"
 )
 
 //export callback
@@ -39,41 +47,26 @@ func main() {
 
 	// Start the mixer running
 	go audio.Init(audio.Waves, instr, output)
-	sdl.Init(sdl.INIT_AUDIO)
-	defer sdl.Quit()
+	C.SDL_Init(C.SDL_INIT_AUDIO)
+	defer C.SDL_Quit()
 
 	const bufSize uint16 = 1024
 
-	want := sdl.AudioSpec{
-		Freq:     48000,
-		Format:   sdl.AUDIO_S16,
-		Samples:  bufSize,
-		Channels: 1,
-		Callback: sdl.AudioCallback(C.callback),
-		UserData: unsafe.Pointer(&shitdicks),
+	want := C.SDL_AudioSpec{
+		freq:     48000,
+		format:   C.AUDIO_S16,
+		samples:  C.Uint16(bufSize),
+		channels: 1,
+		callback: C.SDL_AudioCallback(C.callback),
+		userdata: unsafe.Pointer(&output),
 	}
-	var have sdl.AudioSpec
+	var have C.SDL_AudioSpec
 
-	dev, err := sdl.OpenAudioDevice("", false, &want, &have, 0)
+	dev, err := C.SDL_OpenAudioDevice(nil, C.int(0), &want, &have, C.int(0))
 	if err != nil {
 		panic(err)
 	}
-	sdl.PauseAudioDevice(dev, false)
+	C.SDL_PauseAudioDevice(dev, 0)
 	time.Sleep(1 * time.Second)
-	sdl.CloseAudioDevice(dev)
-
-	// ***** Deprecated method attempt *****
-	// callback := func(userdata, new([1024]uint8), bufSize) {
-	// }
-
-	// // Initialize mixer data with wave and sequence
-	// desired := sdl.AudioSpec{
-	// 	freq: 48000,
-	// 	format: sdl.AUDIO_S16,
-	// 	samples: bufSize,
-	// 	callback: callback
-	// 	userdata: userdata
-	// }
-	// var obtained *sdl.AudioSpec
-	// sdl.OpenAudio(&desired, obtained)
+	C.SDL_CloseAudioDevice(dev)
 }
