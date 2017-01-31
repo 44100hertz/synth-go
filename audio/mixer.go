@@ -26,9 +26,8 @@ type Mixer struct {
 
 // Internal channel data
 type Channel struct {
-	index, note        int
+	wave, note         int
 	len, phase, period uint64 // Top 32 bits are used, bottom 32 are like a counter
-	inst               *[3]int
 }
 
 // A public way to modify instrument data
@@ -86,10 +85,9 @@ func (m *Mixer) tick() {
 // Update a pair of channels
 func (m *Mixer) startPair(i int) {
 	l := &m.channel[i*2]
-	l.inst = new([3]int)
 	for {
 		l.phase = (l.phase + l.period) % l.len
-		m.chans[i] <- m.wave(0, uint32(l.phase>>32)) // Sine wave
+		m.chans[i] <- m.wave(l.wave, uint32(l.phase>>32))
 	}
 }
 
@@ -101,10 +99,9 @@ func (m *Mixer) getPointPeriod(len uint64, note int) uint64 {
 }
 
 // Load instrument data once
-func (m *Mixer) loadInst(index int, instpart int) {
-	c := &m.channel[index*2]
-	i := m.inst[0]
-	//	i := &m.inst[c.inst[instpart]]
+func (m *Mixer) loadInst(channel int, inst int) {
+	c := &m.channel[channel*2]
+	i := m.inst[inst]
 	c.len = uint64(i.Len.(int)) << 32 // Todo: make optional
 	c.note = 60
 }
