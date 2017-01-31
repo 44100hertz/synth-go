@@ -37,8 +37,8 @@ type Inst struct {
 }
 
 // Create and run a mixer
-func Init(wave func(int, uint32) int16, inst []Inst, output chan int16) {
-	m := Mixer{
+func NewMixer(wave func(int, uint32) int16, inst []Inst) Mixer {
+	return Mixer{
 		wave:      wave,
 		channel:   new([NumChans * 2]Channel),
 		chans:     new([NumChans]chan int16),
@@ -48,7 +48,9 @@ func Init(wave func(int, uint32) int16, inst []Inst, output chan int16) {
 		tickRate:  1,
 		tickSpeed: 1,
 	}
+}
 
+func (m *Mixer) Start(output chan int16) {
 	for i := range m.chans {
 		m.chans[i] = make(chan int16)
 		m.loadInst(i, 0)
@@ -69,6 +71,7 @@ func Init(wave func(int, uint32) int16, inst []Inst, output chan int16) {
 		output <- int16(mix >> 2)
 		m.count++
 	}
+
 }
 
 func (m *Mixer) tick() {
