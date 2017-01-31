@@ -16,12 +16,12 @@ type Mixer struct {
 	inst []Inst
 
 	// Calculated values
-	srate   uint32
+	srate   int
 	channel *[NumChans * 2]Channel
 	chans   *[NumChans](chan int16)
 	count, tickCount,
 	bpm, nextTick,
-	tickRate, tickSpeed uint32
+	tickRate, tickSpeed int
 }
 
 // Internal channel data
@@ -36,26 +36,22 @@ type Inst struct {
 	Index, Len interface{}
 }
 
-func NewMixer(wave func(int, uint32) int16, inst []Inst) Mixer {
-	return Mixer{
+// Create and run a mixer
+func Init(wave func(int, uint32) int16, inst []Inst, output chan int16) {
+	m := Mixer{
 		wave:      wave,
 		channel:   new([NumChans * 2]Channel),
 		chans:     new([NumChans]chan int16),
 		inst:      inst,
+		srate:     48000,
 		bpm:       120,
 		tickRate:  1,
 		tickSpeed: 1,
 	}
-}
-
-// Create and run a mixer
-func (m Mixer) Init(output chan int16, srate uint32) {
-	m.srate = srate
 
 	for i := range m.chans {
 		m.chans[i] = make(chan int16)
 		m.loadInst(i, 0)
-		m.channel[i*2].inst = new([3]int)
 		go m.startPair(i)
 	}
 
@@ -87,6 +83,7 @@ func (m *Mixer) tick() {
 // Update a pair of channels
 func (m *Mixer) startPair(i int) {
 	l := &m.channel[i*2]
+	l.inst = new([3]int)
 	for {
 		l.phase = (l.phase + l.period) % l.len
 		m.chans[i] <- m.wave(0, uint32(l.phase>>32)) // Sine wave
