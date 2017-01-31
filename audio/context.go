@@ -36,6 +36,7 @@ func callback(userdata unsafe.Pointer, stream *C.Uint8, length C.int) {
 
 // Temporary SDL code is in main first as not to clutter things
 func Start(instr []Inst) {
+	// Create and set up SDL context
 	C.SDL_Init(C.SDL_INIT_AUDIO)
 	defer C.SDL_Quit()
 
@@ -47,10 +48,13 @@ func Start(instr []Inst) {
 		callback: C.SDL_AudioCallback(C.callback),
 	}
 	var have C.SDL_AudioSpec
-	m := NewMixer(Waves, instr)
-	go m.Start(output)
-
 	dev := C.SDL_OpenAudioDevice(nil, 0, &want, &have, 0)
+
+	// Initialize a mixer
+	m := NewMixer(Waves, instr)
+	go m.Start(output, uint64(have.freq))
+
+	// Play 1 second of audio
 	C.SDL_PauseAudioDevice(dev, 0)
 	time.Sleep(time.Second)
 	C.SDL_CloseAudioDevice(dev)

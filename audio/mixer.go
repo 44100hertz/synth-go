@@ -16,12 +16,12 @@ type Mixer struct {
 	inst []Inst
 
 	// Calculated values
-	srate   int
+	srate   uint64
 	channel *[NumChans * 2]Channel
 	chans   *[NumChans](chan int16)
-	count, tickCount,
-	bpm, nextTick,
-	tickRate, tickSpeed int
+	tickCount,
+	bpm, tickRate, tickSpeed uint64
+	count, nextTick uint64
 }
 
 // Internal channel data
@@ -42,14 +42,14 @@ func NewMixer(wave func(int, uint32) int16, inst []Inst) Mixer {
 		channel:   new([NumChans * 2]Channel),
 		chans:     new([NumChans]chan int16),
 		inst:      inst,
-		srate:     48000,
 		bpm:       120,
 		tickRate:  1,
 		tickSpeed: 1,
 	}
 }
 
-func (m *Mixer) Start(output chan int16) {
+func (m *Mixer) Start(output chan int16, srate uint64) {
+	m.srate = srate
 	for i := range m.chans {
 		m.chans[i] = make(chan int16)
 		m.loadInst(i, 0)
