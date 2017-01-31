@@ -4,7 +4,12 @@ Current idea bouncing around: Make the mixer's meaningful data into
 Exported data, then pass the mixer by reference and let the user
 modify it however. For internal data that is useful to reference but
 not meant to be modified, implement getters.
-
 ** TODO more mixer functionality, e.g. what's in spec
-** TODO set mixer timing based on sequence length
+** TODO mixer close timing
+The mixer needs to explicitly know when to close
 ** TODO sends
+Override some channel data calculation and replace the contents of that channel
+with some given data.
+Sending left will preserve effects, etc. Sending right will play back raw.
+** TODO chip mode vs sample mode
+Make channel use either absolute pitch or relative pitch
