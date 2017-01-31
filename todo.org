@@ -1,0 +1,10 @@
+* Audio
+** TODO design a nice way to pass around sequence-able data
+Current idea bouncing around: Make the mixer's meaningful data into
+Exported data, then pass the mixer by reference and let the user
+modify it however. For internal data that is useful to reference but
+not meant to be modified, implement getters.
+
+** TODO more mixer functionality, e.g. what's in spec
+** TODO set mixer timing based on sequence length
+** TODO sends
