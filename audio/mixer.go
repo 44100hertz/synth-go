@@ -16,14 +16,14 @@ type Mixer struct {
 
 	// Calculated values
 	srate                               uint64
-	channel                             *[NumChans * 2]Channel
+	channel                             *[NumChans * 2]channel
 	chans                               *[NumChans](chan int16)
 	tickCount, bpm, tickRate, tickSpeed uint64
 	count, nextTick                     uint64
 }
 
 // Internal channel data
-type Channel struct {
+type channel struct {
 	wave, note         int
 	len, phase, period uint64 // Top 32 bits are used, bottom 32 are like a counter
 }
@@ -32,7 +32,7 @@ type Channel struct {
 func NewMixer(wave func(int, uint32) int16) Mixer {
 	return Mixer{
 		wave:      wave,
-		channel:   new([NumChans * 2]Channel),
+		channel:   new([NumChans * 2]channel),
 		chans:     new([NumChans]chan int16),
 		bpm:       120,
 		tickRate:  1,
