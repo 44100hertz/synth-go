@@ -35,6 +35,7 @@ type Ch struct {
 	Wave       int    // Index of wave to use for wave function
 	Note       int32  // Midi note number
 	Tune       int32  // Fine tuning, one note = 0x8000
+	Vol        uint32 // Volume that affects effects
 	Len, Phase uint64 // Length of wave and position in wave
 	Period     uint64 // How much to increment phase for each point
 }
@@ -73,7 +74,13 @@ func (m *Mixer) Start(output chan int16, srate uint64) {
 		for i := range m.chans {
 			mix += int32(<-m.chans[i])
 		}
-		output <- int16(mix >> 2)
+		switch {
+		case mix > 0x7fff:
+			mix = 0x7fff
+		case mix < -0x8000:
+			mix = -0x8000
+		}
+		output <- int16(mix)
 		m.count++
 	}
 
@@ -101,7 +108,8 @@ func (m *Mixer) startPair(i int) {
 	l.Note = 60
 	for {
 		l.Phase = (l.Phase + l.Period) % l.Len
-		m.chans[i] <- m.wave(l.Wave, uint32(l.Phase>>32))
+		wave := uint32(m.wave(l.Wave, uint32(l.Phase>>32)))
+		m.chans[i] <- int16((wave * l.Vol) >> 16)
 	}
 }
 
