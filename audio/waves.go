@@ -37,11 +37,11 @@ func Sine(off uint32) int16 {
 	case 0:
 		return lut[o]
 	case 1:
-		return lut[lutSize-o]
+		return lut[lutSize-o-1]
 	case 2:
 		return -lut[o]
 	case 3:
-		return -lut[lutSize-o]
+		return -lut[lutSize-o-1]
 	}
 	return 0
 }
@@ -53,7 +53,7 @@ func HalfSine(off uint32) int16 {
 	case 0:
 		return lut[o]
 	case 1:
-		return lut[lutSize-o]
+		return lut[lutSize-o-1]
 	}
 	return 0
 }
@@ -65,7 +65,7 @@ func CamelSine(off uint32) int16 {
 	case 0, 2:
 		return lut[o]
 	case 1, 3:
-		return lut[lutSize-o]
+		return lut[lutSize-o-1]
 	}
 	return 0
 }
