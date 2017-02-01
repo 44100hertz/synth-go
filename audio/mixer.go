@@ -98,7 +98,7 @@ func (m *Mixer) tick() {
 func (m *Mixer) startPair(i int) {
 	l := &m.Ch[i*2]
 	// basic test code
-	l.Len = 0xffff << 32
+	l.Len = 0x10000 << 32
 	l.Note = 60
 	for {
 		l.Phase = (l.Phase + l.Period) % l.Len
