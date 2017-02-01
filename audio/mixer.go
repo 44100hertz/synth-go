@@ -33,7 +33,8 @@ type Mixer struct {
 // Internal channel data
 type Channel struct {
 	Wave       int    // Index of wave to use for wave function
-	Note       int    // Midi note number
+	Note       int32  // Midi note number
+	Tune       int32  // Fine tuning, one note = 0x8000
 	Len, Phase uint64 // Length of wave and position in wave
 	Period     uint64 // How much to increment phase for each point
 	update     bool   // Whether or not to recalculate values
@@ -84,7 +85,7 @@ func (m *Mixer) Start(output chan int16, srate uint64) {
 func (m *Mixer) tick() {
 	for i := range m.Channel {
 		c := &m.Channel[i]
-		c.Period = m.getPointPeriod(c.Len, c.Note)
+		c.Period = m.getPointPeriod(c.Len, c.Note, c.Tune)
 	}
 	m.nextTick = 60*m.srate/m.Bpm/m.TickRate + m.count
 	m.tickCount++
@@ -103,10 +104,11 @@ func (m *Mixer) startPair(i int) {
 }
 
 // Calculate amount to add to phase to produce a given pitch
-func (m *Mixer) getPointPeriod(len uint64, note int) uint64 {
+func (m *Mixer) getPointPeriod(len uint64, note int32, tune int32) uint64 {
 	// Find point period for 1hz wave at given length
-	rate := len / m.srate
+	rate := float64(len / m.srate)
 	// Find desired pitch in hertz
-	pitch := math.Pow(2, float64(note-60)/12.0) * 440
-	return uint64(float64(rate) * pitch)
+	totalNote := float64(note) + float64(tune)/0x8000
+	pitch := math.Pow(2, (totalNote-60)/12.0) * 440
+	return uint64(rate * pitch)
 }
