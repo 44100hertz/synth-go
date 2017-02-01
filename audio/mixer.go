@@ -37,7 +37,6 @@ type Ch struct {
 	Tune       int32  // Fine tuning, one note = 0x8000
 	Len, Phase uint64 // Length of wave and position in wave
 	Period     uint64 // How much to increment phase for each point
-	update     bool   // Whether or not to recalculate values
 }
 
 func NewMixer(wave func(int, uint32) int16, seq func(*Mixer)) Mixer {
