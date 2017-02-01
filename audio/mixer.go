@@ -39,6 +39,7 @@ type Ch struct {
 	MVol, MVolSlide int32  // Mixer volume; after effects
 	Len, Phase      uint64 // Length of wave and position in wave
 	Period          uint64 // How much to increment phase for each point
+	DelayTicks      uint64 // Length of delay in ticks
 	Delay           uint16 // Length of a delay effect in samples
 	DelayLevel      int32  // Level at which to mix in delay effect
 	DelayFilter     uint16 // Rectangular filter size 2^n added to delay
@@ -112,6 +113,11 @@ func (m *Mixer) tick() {
 		// Cannot delay by amount 0
 		if c.DelayFilter == 0 {
 			c.DelayFilter = 1
+		}
+
+		if c.DelayTicks > 0 {
+			c.Delay = uint16(c.DelayTicks * m.srate * 60 /
+				m.Bpm / m.TickRate)
 		}
 
 		// Set pitch
