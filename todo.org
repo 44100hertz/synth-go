@@ -10,6 +10,7 @@ though. User is free to break things, and that's okay. It's obvious
 what's meant to be touched, at least so far.
 ** TODO more mixer functionality, e.g. what's in spec
 ** TODO make delay effect based on ticks, not samples
+** TODO integrate FIR as extension to delay
 ** TODO proper channel pairs
 ** TODO mixer close timing
 The mixer needs to explicitly know when to close
@@ -20,6 +21,8 @@ Sending left will preserve effects, etc. Sending right will play back raw.
 ** TODO chip mode vs sample mode
 Make channel use either absolute pitch or relative pitch
 ** TODO create mixer demo, sequence gen helpers
+
+* Optimizations
 ** TODO assess converting things to 32-bit
 It would help portability a lot to use 32bit numbers. In addition, it
 keeps things more limited and less likely to break.
