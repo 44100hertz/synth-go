@@ -1,9 +1,13 @@
 * Audio
-** TODO design a nice way to pass around sequence-able data
+** DONE design a nice way to pass around sequence-able data
 Current idea bouncing around: Make the mixer's meaningful data into
 Exported data, then pass the mixer by reference and let the user
 modify it however. For internal data that is useful to reference but
 not meant to be modified, implement getters.
+
+Done: Things get exported in a way that can be modified. No getters
+though. User is free to break things, and that's okay. It's obvious
+what's meant to be touched, at least so far.
 ** TODO more mixer functionality, e.g. what's in spec
 ** TODO mixer close timing
 The mixer needs to explicitly know when to close
@@ -13,3 +17,7 @@ with some given data.
 Sending left will preserve effects, etc. Sending right will play back raw.
 ** TODO chip mode vs sample mode
 Make channel use either absolute pitch or relative pitch
+** TODO create mixer demo, sequence gen helpers
+** TODO assess converting things to 32-bit
+It would help portability a lot to use 32bit numbers. In addition, it
+keeps things more limited and less likely to break.
