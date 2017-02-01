@@ -7,6 +7,6 @@ func main() {
 		m.Ch[0].Tune += 0xff0
 		m.Ch[2].Tune -= 0xff0
 	}
-	audio.Start(seq)
-
+	m := audio.NewMixer(audio.Waves, seq)
+	audio.Start(&m)
 }
