@@ -41,9 +41,11 @@ type Ch struct {
 	Period          uint64 // How much to increment phase for each point
 	Delay           uint16 // Length of a delay effect in samples
 	DelayLevel      int32  // Level at which to mix in delay effect
+	DelayFilter     uint16 // Rectangular filter size 2^n added to delay
 
 	hist     [1 << 16]int16 // 64kb of channel history
 	histHead uint16         // Current history location
+	delayAvg int32          // Rolling average tracker for delay
 }
 
 func NewMixer(wave func(int, uint32) int16, seq func(*Mixer)) Mixer {
@@ -97,12 +99,22 @@ func (m *Mixer) Start(output chan int16, srate uint64) {
 func (m *Mixer) tick() {
 	for i := range m.Ch {
 		c := &m.Ch[i]
+
+		// Sliding values
 		c.Tune += c.TuneSlide
 		c.Vol += c.VolSlide
 		c.MVol += c.MVolSlide
+
 		// Limit fine tune range indirectly so that note stays sane
 		c.Note = c.Note + (c.Tune / 0x8000)
 		c.Tune = c.Tune % 0x8000
+
+		// Cannot delay by amount 0
+		if c.DelayFilter == 0 {
+			c.DelayFilter = 1
+		}
+
+		// Set pitch
 		c.Period = m.getPointPeriod(c.Len, c.Note, c.Tune)
 	}
 	m.nextTick = 60*m.srate/m.Bpm/m.TickRate + m.count
@@ -114,7 +126,6 @@ func (m *Mixer) startPair(i int) {
 	l := &m.Ch[i*2]
 	// basic test code
 	l.Len = 0x10000 << 32
-	l.Note = 60
 	for {
 		// Set phase and grab wave
 		l.Phase = (l.Phase + l.Period) % l.Len
@@ -122,8 +133,13 @@ func (m *Mixer) startPair(i int) {
 		wave = int32((wave * l.Vol) >> 16)
 
 		// Apply delay effect
-		delay := l.histHead - l.Delay
-		wave += int32(l.hist[delay]) * l.DelayLevel >> 16
+		// Important that this is done first
+		var delayStart uint16 = l.histHead - l.Delay
+		var delayEnd uint16 = delayStart - l.DelayFilter
+		l.delayAvg += int32(l.hist[delayStart]) / int32(l.DelayFilter)
+		l.delayAvg -= int32(l.hist[delayEnd]) / int32(l.DelayFilter)
+		wave = l.delayAvg*l.DelayLevel>>16 + wave
+
 		// Store history for delay effect
 		l.hist[l.histHead] = int16(wave)
 		l.histHead++
