@@ -22,7 +22,7 @@ type Mixer struct {
 	count    uint64 // Point counter
 	nextTick uint64 // Location of next tick in points
 
-	Channel   *[NumChans * 2]Channel  // Channels; pairs next to each other
+	Ch        *[NumChans * 2]Ch       // Chs; pairs next to each other
 	chans     *[NumChans](chan int16) // Data back from channel pairs
 	Bpm       uint64                  // Song speed in beats per minute
 	TickRate  uint64                  // Ticks per update
@@ -31,7 +31,7 @@ type Mixer struct {
 }
 
 // Internal channel data
-type Channel struct {
+type Ch struct {
 	Wave       int    // Index of wave to use for wave function
 	Note       int32  // Midi note number
 	Tune       int32  // Fine tuning, one note = 0x8000
@@ -44,7 +44,7 @@ func NewMixer(wave func(int, uint32) int16, seq func(*Mixer)) Mixer {
 	return Mixer{
 		wave:      wave,
 		seq:       seq,
-		Channel:   new([NumChans * 2]Channel),
+		Ch:        new([NumChans * 2]Ch),
 		chans:     new([NumChans]chan int16),
 		Bpm:       120,
 		TickRate:  24,
@@ -83,8 +83,8 @@ func (m *Mixer) Start(output chan int16, srate uint64) {
 // This is ran multiple times per beat in order to update various data.
 // It coincides with sequence callbacks.
 func (m *Mixer) tick() {
-	for i := range m.Channel {
-		c := &m.Channel[i]
+	for i := range m.Ch {
+		c := &m.Ch[i]
 		// Limit fine tune range indirectly so that note stays sane
 		c.Note = c.Note + (c.Tune / 0x8000)
 		c.Tune = c.Tune % 0x8000
@@ -94,9 +94,9 @@ func (m *Mixer) tick() {
 	m.tickCount++
 }
 
-// Run a pair of Channels
+// Run a pair of Chs
 func (m *Mixer) startPair(i int) {
-	l := &m.Channel[i*2]
+	l := &m.Ch[i*2]
 	// basic test code
 	l.Len = 0xffff << 32
 	l.Note = 60
