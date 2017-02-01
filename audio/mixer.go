@@ -32,13 +32,13 @@ type Mixer struct {
 
 // Internal channel data
 type Ch struct {
-	Wave       int    // Index of wave to use for wave function
-	Note       int32  // Midi note number
-	Tune       int32  // Fine tuning, one note = 0x8000
-	Vol        int32  // Pre-Volume that affects effects
-	MVol       int32  // Mixer volume; after effects
-	Len, Phase uint64 // Length of wave and position in wave
-	Period     uint64 // How much to increment phase for each point
+	Wave            int    // Index of wave to use for wave function
+	Note            int32  // Midi note number
+	Tune, TuneSlide int32  // Fine tuning, one note = 0x8000
+	Vol, VolSlide   int32  // Pre-Volume that affects effects
+	MVol, MVolSlide int32  // Mixer volume; after effects
+	Len, Phase      uint64 // Length of wave and position in wave
+	Period          uint64 // How much to increment phase for each point
 }
 
 func NewMixer(wave func(int, uint32) int16, seq func(*Mixer)) Mixer {
@@ -98,6 +98,9 @@ func (m *Mixer) Start(output chan int16, srate uint64) {
 func (m *Mixer) tick() {
 	for i := range m.Ch {
 		c := &m.Ch[i]
+		c.Tune += c.TuneSlide
+		c.Vol += c.VolSlide
+		c.MVol += c.MVolSlide
 		// Limit fine tune range indirectly so that note stays sane
 		c.Note = c.Note + (c.Tune / 0x8000)
 		c.Tune = c.Tune % 0x8000
