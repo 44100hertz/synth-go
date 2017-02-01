@@ -71,7 +71,7 @@ using a callback that passes in song data. Wave data also uses a callback.
  - [X] Mixer Volume, slide. Applied after effects.
  - [X] Note Pitch, slide
  - [ ] LFO; level, speed, mode (volume(T), pitch(V), both, off)
- - [ ] FIR pitch, slide, length 2^n, level
+ - [X] FIR pitch, slide, length 2^n, level
  - [X] Delay offset, volume
  - [ ] Loop mode (off, normal, swap)
  - [ ] Delay mode (off, forward, pingpong)

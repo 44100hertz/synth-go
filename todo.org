@@ -9,8 +9,12 @@ Done: Things get exported in a way that can be modified. No getters
 though. User is free to break things, and that's okay. It's obvious
 what's meant to be touched, at least so far.
 ** TODO more mixer functionality, e.g. what's in spec
-** TODO make delay effect based on ticks, not samples
-** TODO integrate FIR as extension to delay
+** TODO make delay and filter samplerate independant
+ - [X] Set the delay in number of ticks.
+ - [X] Update the delay every tick based on the tickrate/bpm aswell.
+ - [ ] Set the filter to a note based on sample rate.
+ - [ ] Add a frequency param for delay
+** DONE integrate FIR as extension to delay
 ** TODO proper channel pairs
 ** TODO mixer close timing
 The mixer needs to explicitly know when to close
