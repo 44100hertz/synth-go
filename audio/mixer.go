@@ -22,7 +22,7 @@ type Mixer struct {
 	count    uint64 // Point counter
 	nextTick uint64 // Location of next tick in points
 
-	Ch        *[NumChans * 2]Ch       // Chs; pairs next to each other
+	Ch        *[NumChans * 2]Channel  // Channels; pairs next to each other
 	chans     *[NumChans](chan int32) // Data back from channel pairs
 	Bpm       uint64                  // Song speed in beats per minute
 	TickRate  uint64                  // Ticks per update
@@ -31,7 +31,7 @@ type Mixer struct {
 }
 
 // Internal channel data
-type Ch struct {
+type Channel struct {
 	Wave            int    // Index of wave to use for wave function
 	Note            int32  // Midi note number
 	Tune, TuneSlide int32  // Fine tuning, one note = 0x8000
@@ -50,15 +50,21 @@ type Ch struct {
 }
 
 func NewMixer(wave func(int, uint32) int16, seq func(*Mixer)) Mixer {
-	return Mixer{
+	m := Mixer{
 		wave:      wave,
 		seq:       seq,
-		Ch:        new([NumChans * 2]Ch),
+		Ch:        new([NumChans * 2]Channel),
 		chans:     new([NumChans]chan int32),
 		Bpm:       120,
 		TickRate:  24,
 		TickSpeed: 6,
 	}
+	m.ForAllCh(func(c *Channel) {
+		c.Vol = 0x8000
+		c.MVol = 0x8000
+		c.Note = 60
+	})
+	return m
 }
 
 func (m *Mixer) Start(output chan int16, srate uint64) {
@@ -164,9 +170,8 @@ func (m *Mixer) getPointPeriod(len uint64, note int32, tune int32) uint64 {
 	return uint64(rate * pitch)
 }
 
-func (m *Mixer) ResetLevels(volume float64) {
+func (m *Mixer) ForAllCh(op func(*Channel)) {
 	for i := range m.Ch {
-		m.Ch[i].Vol = 0x10000
-		m.Ch[i].MVol = int32(volume * 0x10000)
+		op(&m.Ch[i])
 	}
 }
