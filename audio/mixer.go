@@ -85,6 +85,9 @@ func (m *Mixer) Start(output chan int16, srate uint64) {
 func (m *Mixer) tick() {
 	for i := range m.Channel {
 		c := &m.Channel[i]
+		// Limit fine tune range indirectly so that note stays sane
+		c.Note = c.Note + (c.Tune / 0x8000)
+		c.Tune = c.Tune % 0x8000
 		c.Period = m.getPointPeriod(c.Len, c.Note, c.Tune)
 	}
 	m.nextTick = 60*m.srate/m.Bpm/m.TickRate + m.count
