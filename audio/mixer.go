@@ -39,6 +39,11 @@ type Ch struct {
 	MVol, MVolSlide int32  // Mixer volume; after effects
 	Len, Phase      uint64 // Length of wave and position in wave
 	Period          uint64 // How much to increment phase for each point
+	Delay           uint16 // Length of a delay effect in samples
+	DelayLevel      int32  // Level at which to mix in delay effect
+
+	hist     [1 << 16]int16 // 64kb of channel history
+	histHead uint16         // Current history location
 }
 
 func NewMixer(wave func(int, uint32) int16, seq func(*Mixer)) Mixer {
@@ -60,12 +65,6 @@ func (m *Mixer) Start(output chan int16, srate uint64) {
 	for i := range m.chans {
 		m.chans[i] = make(chan int32)
 		go m.startPair(i)
-	}
-
-	// Initialize default channel data
-	for i := range m.Ch {
-		m.Ch[i].Vol = 0x8000
-		m.Ch[i].MVol = 0x10000
 	}
 
 	// Run the mixer and ticking
@@ -117,9 +116,18 @@ func (m *Mixer) startPair(i int) {
 	l.Len = 0x10000 << 32
 	l.Note = 60
 	for {
+		// Set phase and grab wave
 		l.Phase = (l.Phase + l.Period) % l.Len
 		wave := int32(m.wave(l.Wave, uint32(l.Phase>>32)))
 		wave = int32((wave * l.Vol) >> 16)
+
+		// Apply delay effect
+		delay := l.histHead - l.Delay
+		wave += int32(l.hist[delay]) * l.DelayLevel >> 16
+		// Store history for delay effect
+		l.hist[l.histHead] = int16(wave)
+		l.histHead++
+
 		m.chans[i] <- int32((wave * l.MVol) >> 16)
 	}
 }
@@ -132,4 +140,11 @@ func (m *Mixer) getPointPeriod(len uint64, note int32, tune int32) uint64 {
 	totalNote := float64(note) + float64(tune)/0x8000
 	pitch := math.Pow(2, (totalNote-60)/12.0) * 440
 	return uint64(rate * pitch)
+}
+
+func (m *Mixer) ResetLevels(volume float64) {
+	for i := range m.Ch {
+		m.Ch[i].Vol = 0x10000
+		m.Ch[i].MVol = int32(volume * 0x10000)
+	}
 }
