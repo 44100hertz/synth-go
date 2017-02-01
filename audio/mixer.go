@@ -15,50 +15,50 @@ import "math"
 const NumChans int = 4
 
 type Mixer struct {
-	// Passed-in values
-	srate uint64
-	wave  func(int, uint32) int16
+	srate uint64                  // Sample rate
+	wave  func(int, uint32) int16 // Function used for sound waves
 
-	// External values
-	Channel   *[NumChans * 2]Channel
-	Bpm       uint64
-	TickRate  uint64
-	TickSpeed uint64
+	count    uint64 // Point counter
+	nextTick uint64 // Location of next tick in points
 
-	// Internal values
-	chans     *[NumChans](chan int16)
-	count     uint64
-	tickCount uint64
-	nextTick  uint64
+	Channel   *[NumChans * 2]Channel  // Channels; pairs next to each other
+	chans     *[NumChans](chan int16) // Data back from channel pairs
+	Bpm       uint64                  // Song speed in beats per minute
+	TickRate  uint64                  // Ticks per update
+	TickSpeed uint64                  // Callback after this many ticks
+	tickCount uint64                  // Counts down ticks until callback
 }
 
 // Internal channel data
 type Channel struct {
-	Wave       int
-	Note       int
-	Period     uint64
-	Len, Phase uint64
+	Wave       int    // Index of wave to use for wave function
+	Note       int    // Midi note number
+	Len, Phase uint64 // Length of wave and position in wave
+	Period     uint64 // How much to increment phase for each point
+	update     bool   // Whether or not to recalculate values
 }
 
-// Create and run a mixer
 func NewMixer(wave func(int, uint32) int16) Mixer {
 	return Mixer{
 		wave:      wave,
 		Channel:   new([NumChans * 2]Channel),
 		chans:     new([NumChans]chan int16),
 		Bpm:       120,
-		TickRate:  1,
-		TickSpeed: 1,
+		TickRate:  24,
+		TickSpeed: 6,
 	}
 }
 
 func (m *Mixer) Start(output chan int16, srate uint64) {
 	m.srate = srate
+
+	// Start each channel pair wave output
 	for i := range m.chans {
 		m.chans[i] = make(chan int16)
 		go m.startPair(i)
 	}
 
+	// Run the mixer and ticking
 	for {
 		if m.count == m.nextTick {
 			m.tick()
@@ -76,6 +76,8 @@ func (m *Mixer) Start(output chan int16, srate uint64) {
 
 }
 
+// This is ran multiple times per beat in order to update various data.
+// It coincides with sequence callbacks.
 func (m *Mixer) tick() {
 	for i := range m.Channel {
 		c := &m.Channel[i]
@@ -85,7 +87,7 @@ func (m *Mixer) tick() {
 	m.tickCount++
 }
 
-// Update a pair of Channels
+// Run a pair of Channels
 func (m *Mixer) startPair(i int) {
 	l := &m.Channel[i*2]
 	// basic test code
