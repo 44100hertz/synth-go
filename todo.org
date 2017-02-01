@@ -13,7 +13,6 @@ what's meant to be touched, at least so far.
  - [X] Set the delay in number of ticks.
  - [X] Update the delay every tick based on the tickrate/bpm aswell.
  - [ ] Set the filter to a note based on sample rate.
- - [ ] Add a frequency param for delay
 ** DONE integrate FIR as extension to delay
 ** TODO proper channel pairs
 ** TODO mixer close timing
@@ -25,6 +24,7 @@ Sending left will preserve effects, etc. Sending right will play back raw.
 ** TODO chip mode vs sample mode
 Make channel use either absolute pitch or relative pitch
 ** TODO create mixer demo, sequence gen helpers
+** TODO context interface, create one with wave out
 
 * Optimizations
 ** TODO assess converting things to 32-bit
