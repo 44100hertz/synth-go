@@ -60,7 +60,6 @@ func NewMixer(wave func(int, uint32) int16, seq func(*Mixer)) Mixer {
 		TickSpeed: 6,
 	}
 	m.ForAllCh(func(c *Channel) {
-		c.Vol = 0x8000
 		c.MVol = 0x8000
 		c.Note = 60
 	})
