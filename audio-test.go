@@ -2,7 +2,10 @@ package main
 
 import "./audio"
 
-// Temporary SDL code is in main first as not to clutter things
 func main() {
-	audio.Start()
+	seq := func(m *audio.Mixer) {
+		m.Channel[0].Note -= 1
+	}
+	audio.Start(seq)
+
 }

@@ -12,11 +12,12 @@ package audio
 import "math"
 
 // The number of channel pairs, or mixer chans
-const NumChans int = 4
+const NumChans int = 2
 
 type Mixer struct {
 	srate uint64                  // Sample rate
 	wave  func(int, uint32) int16 // Function used for sound waves
+	seq   func(*Mixer)
 
 	count    uint64 // Point counter
 	nextTick uint64 // Location of next tick in points
@@ -38,9 +39,10 @@ type Channel struct {
 	update     bool   // Whether or not to recalculate values
 }
 
-func NewMixer(wave func(int, uint32) int16) Mixer {
+func NewMixer(wave func(int, uint32) int16, seq func(*Mixer)) Mixer {
 	return Mixer{
 		wave:      wave,
+		seq:       seq,
 		Channel:   new([NumChans * 2]Channel),
 		chans:     new([NumChans]chan int16),
 		Bpm:       120,
@@ -63,8 +65,9 @@ func (m *Mixer) Start(output chan int16, srate uint64) {
 		if m.count == m.nextTick {
 			m.tick()
 		}
-		if m.tickCount == m.TickSpeed {
-			// Load sequence data here
+		if m.tickCount >= m.TickSpeed {
+			m.seq(m)
+			m.tickCount = 0
 		}
 		var mix int32 = 0
 		for i := range m.chans {
