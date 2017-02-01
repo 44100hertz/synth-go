@@ -49,15 +49,8 @@ Two stereo mixers for point-resampled direct stereo channels.
 * Video
 * Audio
 ** Tech
-Wavetable pairs with envelope, rectangular FIR, and delay line. Has Stereo,
+Wavetable pairs with envelope, rectangular IIR, and delay line. Stereo,
 Phase modulation, Amplitude modulation, and Sync modes.
-*** FIR
-An extremely lazy FIR. Stores 2^n values, uses a rolling average. Will
-not store more than one value per sample; speed limited by sample rate. Should
-not actually suck because it's pitched, so produces harmonic noises. "Lazy"
-because doesn't recalculate anything when the pitch changes.
-*** Delay line
-Samples a single previous point, and mixes it in later.
 ** API
 Every channel pair has a set of playback parameters. They are updated every tick
 using a callback that passes in song data. Wave data also uses a callback.
@@ -71,9 +64,10 @@ using a callback that passes in song data. Wave data also uses a callback.
  - [X] Mixer Volume, slide. Applied after effects.
  - [X] Note Pitch, slide
  - [ ] LFO; level, speed, mode (volume(T), pitch(V), both, off)
- - [X] FIR pitch, slide, length 2^n, level
+ - [X] IIR pitch, slide, length 2^n, level
  - [X] Delay offset, volume
  - [ ] Loop mode (off, normal, swap)
  - [ ] Delay mode (off, forward, pingpong)
+ - [ ] ADSR envelope for each note
 * Input
 * Misc

@@ -13,7 +13,7 @@ what's meant to be touched, at least so far.
  - [X] Set the delay in number of ticks.
  - [X] Update the delay every tick based on the tickrate/bpm aswell.
  - [ ] Set the filter to a note based on sample rate.
-** DONE integrate FIR as extension to delay
+** DONE integrate IIR as extension to delay
 ** TODO proper channel pairs
 ** TODO mixer close timing
 The mixer needs to explicitly know when to close
