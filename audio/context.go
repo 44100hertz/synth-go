@@ -13,6 +13,7 @@ void callback(void *userdata, Uint8 *stream, int len);
 */
 import "C"
 import (
+	"fmt"
 	"reflect"
 	"time"
 	"unsafe"
@@ -46,12 +47,13 @@ func Start(m *Mixer) {
 	want := C.SDL_AudioSpec{
 		freq:     48000,
 		format:   C.AUDIO_S16,
-		samples:  1024,
+		samples:  512,
 		channels: 2,
 		callback: C.SDL_AudioCallback(C.callback),
 	}
 	var have C.SDL_AudioSpec
 	dev := C.SDL_OpenAudioDevice(nil, 0, &want, &have, 0)
+	fmt.Println("Buffer length: ", have.samples)
 
 	// Initialize a mixer
 	go m.Start(output, uint64(have.freq))
