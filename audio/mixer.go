@@ -39,19 +39,18 @@ const (
 
 // Internal channel data
 type Channel struct {
-	Wave            int    // Index of wave to use for wave function
-	PairMode        int    // Pair mode. See above.
-	Note            int32  // Midi note number
-	Tune, TuneSlide int32  // Fine tuning, one note = 0x8000
-	Vol, VolSlide   int32  // Pre-Volume that affects effects
-	MVol, MVolSlide int32  // Mixer volume; after effects
-	Len, Phase      uint32 // Length of wave and position in wave
-	Period          uint32 // How much to increment phase for each point
-	DelayTicks      uint32 // Length of delay in ticks
-	DelayNote       int32  // Special delay timing used for guitar pluck
-	delay           uint16 // Length of a delay effect in samples
-	DelayLevel      int32  // Level at which to mix in delay effect
-	Filter          uint16 // Rectangular filter added to delay
+	Wave        int    // Index of wave to use for wave function
+	PairMode    int    // Pair mode. See above.
+	Note, Slide int32  // Midi note number
+	Vol, Fade   int32  // Pre-Volume that affects effects
+	MVol, MFade int32  // Mixer volume; after effects
+	Len, Phase  uint32 // Length of wave and position in wave
+	Period      uint32 // How much to increment phase for each point
+	DelayTicks  uint32 // Length of delay in ticks
+	DelayNote   int32  // Special delay timing used for guitar pluck
+	delay       uint16 // Length of a delay effect in samples
+	DelayLevel  int32  // Level at which to mix in delay effect
+	Filter      uint16 // Rectangular filter added to delay
 
 	hist     [1 << 16]int16 // 64kb of channel history
 	histHead uint16         // Current history location
@@ -73,7 +72,7 @@ func NewMixer(wave func(int, uint32) int16, seq func(*Mixer)) Mixer {
 	for i := range m.Ch {
 		c := &m.Ch[i]
 		c.MVol = 0x8000
-		c.Note = 60
+		c.Note = 60 << 16
 		c.Len = 0x10000
 	}
 	return m
@@ -115,19 +114,15 @@ func (m *Mixer) tick() {
 		c := &m.Ch[i]
 
 		// Sliding values
-		c.Tune += c.TuneSlide
-		c.Vol += c.VolSlide
-		c.MVol += c.MVolSlide
-
-		// Limit fine tune range indirectly so that note stays sane
-		c.Note = c.Note + (c.Tune / 0x8000)
-		c.Tune = c.Tune % 0x8000
+		c.Note += c.Slide
+		c.Vol += c.Fade
+		c.MVol += c.MFade
 
 		// Set delay amount
 		switch {
 		case c.DelayNote > 0:
 			c.delay = uint16(float64(m.srate) /
-				getNote(c.DelayNote, 0))
+				getNote(c.DelayNote<<16))
 		case c.DelayTicks > 0:
 			c.delay = uint16(c.DelayTicks * m.srate * 60 /
 				m.Bpm / m.TickRate)
@@ -145,7 +140,7 @@ func (m *Mixer) tick() {
 
 		// Set pitch
 		rate := float64(c.Len / m.srate)
-		c.Period = uint32(rate * getNote(c.Note, c.Tune))
+		c.Period = uint32(rate * getNote(c.Note))
 	}
 	m.nextTick = 60*m.srate/m.Bpm/m.TickRate + m.count
 	m.tickCount++
@@ -166,8 +161,7 @@ func (m *Mixer) startPair(i int) {
 
 		// Get a wave outputxo
 		wave := int32(m.wave(c.Wave, c.Phase))
-		c.out = int32((wave*c.Vol)>>16) +
-			c.delayAvg*c.DelayLevel>>16
+		c.out = int32((wave*c.Vol)>>16) + c.delayAvg*c.DelayLevel>>16
 
 		// Store history for delay effect
 		c.hist[c.histHead] = int16(c.out)
@@ -181,7 +175,7 @@ func (m *Mixer) startPair(i int) {
 		case PAIR_PM:
 			phase(l)
 			filter(l)
-			r.Phase = uint32(int64(l.out) + 0x8000)
+			r.Phase = uint32(l.out + 0x8000)
 			filter(r)
 			m.chans[i] <- int32((r.out * l.MVol) >> 16)
 			m.chans[i] <- int32((r.out * r.MVol) >> 16)
@@ -196,9 +190,9 @@ func (m *Mixer) startPair(i int) {
 	}
 }
 
-func getNote(note int32, tune int32) float64 {
-	totalNote := float64(note) + float64(tune)/0x8000
-	return math.Pow(2, (totalNote-57)/12.0) * 440
+func getNote(note int32) float64 {
+	fnote := float64(note) / (1 << 16)
+	return math.Pow(2, (fnote-69)/12.0) * 440
 }
 
 func (m *Mixer) OnPair(i int, op func(*Channel)) {
