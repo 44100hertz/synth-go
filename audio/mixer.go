@@ -30,9 +30,17 @@ type Mixer struct {
 	tickCount uint64                  // Counts down ticks until callback
 }
 
+const (
+	PAIR_STEREO = iota
+	PAIR_PM
+	PAIR_AM
+	PAIR_SYNC
+)
+
 // Internal channel data
 type Channel struct {
 	Wave            int    // Index of wave to use for wave function
+	PairMode        int    // Pair mode. See above.
 	Note            int32  // Midi note number
 	Tune, TuneSlide int32  // Fine tuning, one note = 0x8000
 	Vol, VolSlide   int32  // Pre-Volume that affects effects
@@ -79,7 +87,6 @@ func (m *Mixer) Start(output chan int16, srate uint64) {
 		go m.startPair(i)
 	}
 
-	// Run the mixer and ticking
 	for {
 		if m.count == m.nextTick {
 			m.tick()
@@ -88,10 +95,12 @@ func (m *Mixer) Start(output chan int16, srate uint64) {
 			m.seq(m)
 			m.tickCount = 0
 		}
+		// Total the mix
 		var mix int32 = 0
 		for i := range m.chans {
 			mix += <-m.chans[i]
 		}
+		// Clamp mix loudness
 		switch {
 		case mix > 0x7fff:
 			mix = 0x7fff
@@ -119,6 +128,7 @@ func (m *Mixer) tick() {
 		c.Note = c.Note + (c.Tune / 0x8000)
 		c.Tune = c.Tune % 0x8000
 
+		// Set delay amount
 		switch {
 		case c.DelayNote > 0:
 			c.delay = uint16(float64(m.srate) /
@@ -126,8 +136,11 @@ func (m *Mixer) tick() {
 		case c.DelayTicks > 0:
 			c.delay = uint16(c.DelayTicks * m.srate * 60 /
 				m.Bpm / m.TickRate)
+		default:
+			c.delay = 0
 		}
-		// Cannot delay by amount 0
+
+		// Cannot filter by 0
 		if c.Filter == 0 {
 			c.Filter = 1
 		}
@@ -143,6 +156,7 @@ func (m *Mixer) tick() {
 // Run a pair of Chs
 func (m *Mixer) startPair(i int) {
 	l := &m.Ch[i*2]
+
 	for {
 		// Set phase and grab wave
 		l.Phase = (l.Phase + l.Period) % l.Len
