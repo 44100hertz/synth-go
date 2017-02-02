@@ -101,8 +101,7 @@ func (m *Mixer) Start(output chan int16, srate uint64) {
 		for i := range m.chans {
 			mix += <-m.chans[i]
 		}
-		// Clamp mix loudness
-		mix = clamp(mix, -0x8000, 0x7fff)
+		clamp16(&mix)
 		output <- int16(mix)
 		m.count++
 	}
@@ -165,6 +164,7 @@ func (m *Mixer) startPair(i int) {
 		var delayEnd uint16 = delayStart - c.Filter
 		c.delayAvg += int32(c.hist[delayStart]) / int32(c.Filter)
 		c.delayAvg -= int32(c.hist[delayEnd]) / int32(c.Filter)
+		clamp16(&c.delayAvg)
 		c.out += c.delayAvg * c.DelayLevel >> 16
 
 		// Store history for delay effect
@@ -204,11 +204,10 @@ func (m *Mixer) OnPair(i int, op func(*Channel)) {
 	op(&m.Ch[i*2+1])
 }
 
-func clamp(a int32, min int32, max int32) int32 {
-	if a < min {
-		return min
-	} else if a > max {
-		return max
+func clamp16(a *int32) {
+	if *a < -0x8000 {
+		*a = -0x8000
+	} else if *a > 0x7fff {
+		*a = 0x7fff
 	}
-	return a
 }
