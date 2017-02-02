@@ -4,7 +4,7 @@ import (
 	"os"
 )
 
-func WaveOut(m *Mixer, Filename string, srate uint64) {
+func WaveOut(m *Mixer, Filename string, srate uint32) {
 	f, err := os.Create(Filename)
 	defer f.Close()
 	if err != nil {

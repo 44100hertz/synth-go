@@ -56,7 +56,7 @@ func Start(m *Mixer) {
 	fmt.Println("Buffer length: ", have.samples)
 
 	// Initialize a mixer
-	go m.Start(output, uint64(have.freq))
+	go m.Start(output, uint32(have.freq))
 
 	// Play 1 second of audio
 	C.SDL_PauseAudioDevice(dev, 0)

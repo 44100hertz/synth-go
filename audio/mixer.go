@@ -15,19 +15,19 @@ import "math"
 const NumChans int = 2
 
 type Mixer struct {
-	srate uint64                  // Sample rate
+	srate uint32                  // Sample rate
 	wave  func(int, uint32) int16 // Function used for sound waves
 	seq   func(*Mixer)
 
-	count    uint64 // Point counter
-	nextTick uint64 // Location of next tick in points
+	count    uint32 // Point counter
+	nextTick uint32 // Location of next tick in points
 
 	Ch        *[NumChans * 2]Channel  // Channels; pairs next to each other
 	chans     *[NumChans](chan int32) // Data back from channel pairs
-	Bpm       uint64                  // Song speed in beats per minute
-	TickRate  uint64                  // Ticks per update
-	TickSpeed uint64                  // Callback after this many ticks
-	tickCount uint64                  // Counts down ticks until callback
+	Bpm       uint32                  // Song speed in beats per minute
+	TickRate  uint32                  // Ticks per update
+	TickSpeed uint32                  // Callback after this many ticks
+	tickCount uint32                  // Counts down ticks until callback
 }
 
 const (
@@ -45,9 +45,9 @@ type Channel struct {
 	Tune, TuneSlide int32  // Fine tuning, one note = 0x8000
 	Vol, VolSlide   int32  // Pre-Volume that affects effects
 	MVol, MVolSlide int32  // Mixer volume; after effects
-	Len, Phase      uint64 // Length of wave and position in wave
-	Period          uint64 // How much to increment phase for each point
-	DelayTicks      uint64 // Length of delay in ticks
+	Len, Phase      uint32 // Length of wave and position in wave
+	Period          uint32 // How much to increment phase for each point
+	DelayTicks      uint32 // Length of delay in ticks
 	DelayNote       int32  // Special delay timing used for guitar pluck
 	delay           uint16 // Length of a delay effect in samples
 	DelayLevel      int32  // Level at which to mix in delay effect
@@ -74,12 +74,12 @@ func NewMixer(wave func(int, uint32) int16, seq func(*Mixer)) Mixer {
 		c := &m.Ch[i]
 		c.MVol = 0x8000
 		c.Note = 60
-		c.Len = 0x10000 << 32
+		c.Len = 0x10000
 	}
 	return m
 }
 
-func (m *Mixer) Start(output chan int16, srate uint64) {
+func (m *Mixer) Start(output chan int16, srate uint32) {
 	m.srate = srate
 
 	// Start each channel pair wave output
@@ -145,7 +145,7 @@ func (m *Mixer) tick() {
 
 		// Set pitch
 		rate := float64(c.Len / m.srate)
-		c.Period = uint64(rate * getNote(c.Note, c.Tune))
+		c.Period = uint32(rate * getNote(c.Note, c.Tune))
 	}
 	m.nextTick = 60*m.srate/m.Bpm/m.TickRate + m.count
 	m.tickCount++
@@ -165,7 +165,7 @@ func (m *Mixer) startPair(i int) {
 		clamp16(&c.delayAvg)
 
 		// Get a wave outputxo
-		wave := int32(m.wave(c.Wave, uint32(c.Phase>>32)))
+		wave := int32(m.wave(c.Wave, c.Phase))
 		c.out = int32((wave*c.Vol)>>16) +
 			c.delayAvg*c.DelayLevel>>16
 
@@ -181,7 +181,7 @@ func (m *Mixer) startPair(i int) {
 		case PAIR_PM:
 			phase(l)
 			filter(l)
-			r.Phase = uint64(l.out+0x8000) << 32
+			r.Phase = uint32(int64(l.out) + 0x8000)
 			filter(r)
 			m.chans[i] <- int32((r.out * l.MVol) >> 16)
 			m.chans[i] <- int32((r.out * r.MVol) >> 16)
@@ -198,7 +198,7 @@ func (m *Mixer) startPair(i int) {
 
 func getNote(note int32, tune int32) float64 {
 	totalNote := float64(note) + float64(tune)/0x8000
-	return math.Pow(2, (totalNote-60)/12.0) * 440
+	return math.Pow(2, (totalNote-57)/12.0) * 440
 }
 
 func (m *Mixer) OnPair(i int, op func(*Channel)) {
