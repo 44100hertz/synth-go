@@ -136,8 +136,11 @@ func (m *Mixer) tick() {
 		}
 
 		// Cannot filter by 0
-		if c.Filter == 0 {
+		if c.Filter < 1 {
 			c.Filter = 1
+		}
+		if c.Vol < 0 {
+			c.Vol = 0
 		}
 
 		// Set pitch
@@ -154,18 +157,17 @@ func (m *Mixer) startPair(i int) {
 		c.Phase = (c.Phase + c.Period) % c.Len
 	}
 	filter := func(c *Channel) {
-		// Get a wave out
-		wave := int32(m.wave(c.Wave, uint32(c.Phase>>32)))
-		c.out = int32((wave * c.Vol) >> 16)
-
-		// Apply delay effect
-		// Important that this is done first
+		// Calculate delay
 		var delayStart uint16 = c.histHead - c.delay
 		var delayEnd uint16 = delayStart - c.Filter
 		c.delayAvg += int32(c.hist[delayStart]) / int32(c.Filter)
 		c.delayAvg -= int32(c.hist[delayEnd]) / int32(c.Filter)
 		clamp16(&c.delayAvg)
-		c.out += c.delayAvg * c.DelayLevel >> 16
+
+		// Get a wave outputxo
+		wave := int32(m.wave(c.Wave, uint32(c.Phase>>32)))
+		c.out = int32((wave*c.Vol)>>16) +
+			c.delayAvg*c.DelayLevel>>16
 
 		// Store history for delay effect
 		c.hist[c.histHead] = int16(c.out)
