@@ -190,8 +190,8 @@ func (m *Mixer) startPair(i int) {
 			m.chans[i] <- int32((r.out * r.MVol) >> 16)
 		default:
 			phase(l)
-			filter(l)
 			phase(r)
+			filter(l)
 			filter(r)
 			m.chans[i] <- int32((l.out * l.MVol) >> 16)
 			m.chans[i] <- int32((r.out * r.MVol) >> 16)
