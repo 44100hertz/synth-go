@@ -102,12 +102,7 @@ func (m *Mixer) Start(output chan int16, srate uint64) {
 			mix += <-m.chans[i]
 		}
 		// Clamp mix loudness
-		switch {
-		case mix > 0x7fff:
-			mix = 0x7fff
-		case mix < -0x8000:
-			mix = -0x8000
-		}
+		mix = clamp(mix, -0x8000, 0x7fff)
 		output <- int16(mix)
 		m.count++
 	}
@@ -207,4 +202,13 @@ func getNote(note int32, tune int32) float64 {
 func (m *Mixer) OnPair(i int, op func(*Channel)) {
 	op(&m.Ch[i*2])
 	op(&m.Ch[i*2+1])
+}
+
+func clamp(a int32, min int32, max int32) int32 {
+	if a < min {
+		return min
+	} else if a > max {
+		return max
+	}
+	return a
 }
