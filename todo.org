@@ -8,12 +8,20 @@ not meant to be modified, implement getters.
 Done: Things get exported in a way that can be modified. No getters
 though. User is free to break things, and that's okay. It's obvious
 what's meant to be touched, at least so far.
+
+There's more to optimize here, though.
 ** DONE stereo mixer!!
-** TODO better range checking to squash bugs
-Go ahead, try delay a wave that doesn't get shut off.
-^ okay, that has been  marginally fixed.
-Also, it's probably bad to mix by negative values?
-^ Will think about.
+SDL might have ways to make it more automatic. Currently some code
+duplication between wave out and SDL context out, as well.
+
+Sending two values thru channels might be a mistake.
+** TODO range checking
+Go ahead, try delay a wave that doesn't get shut off. That has been
+fixed, clipping is intended for infinite feedback.
+
+There's probably some negatives that still need to be forced into
+being positive.
+
 ** TODO more mixer functionality, e.g. what's in spec
  - [X] Wave index, offset, length. Passed to wave callback, length used
    for looping.
@@ -23,33 +31,71 @@ Also, it's probably bad to mix by negative values?
  - [ ] LFO; level, speed, mode (volume(T), pitch(V), both, off)
  - [X] IIR pitch, slide, length 2^n, level
  - [X] Delay offset, volume
- - [ ] Loop mode (off, normal, swap)
- - [ ] Delay mode (off, forward, pingpong)
- - [ ] ADSR envelope for each note
+*** TODO ADSR
+There's a lot to think about with envelopes in general. I need a
+notion of note on and note off to make it really shine.
+
+I don't believe handling of notes/instruments is best done directly in
+this way. I'm leaning toward a nice wrapper that drives a mixer more
+easily. Let the mixer mix.
+*** TODO Delay
+Delay wants off, normal, and pingpong modes. Fair enough.
+
+Not sure how I feel about pingpong delay when the left channel is
+driving the right channel's phase, as in PM, AM, Sync modes.
 ** DONE make delay and filter samplerate independant
  - [X] Set the delay in number of ticks.
  - [X] Update the delay every tick based on the tickrate/bpm aswell.
  - [ ] Set filter based on length in µs
-^ Actually, this can't work! Reasonable filters are limited as heck!
-I'd say just double or halve the filter based on sample rate, just to
-make it a bit more consistant. It's the best you can do.
+^ Actually, this can't work! Reasonable filters are tiny as heck,
+sitting only at a few samples! I don't want the user to have several
+meaningless delay amounts. I'd say just double or halve the filter
+based on sample rate, just to make it a bit more consistant. It's the
+best you can do.
 ** DONE integrate IIR as extension to delay
-** TODO proper channel pairs
+It's good that these are the same, they work really well with each
+other.
+** DONE channel pairs
 ** TODO mixer close timing
 The mixer needs to explicitly know when to close
 ** TODO sends
 Override some channel data calculation and replace the contents of that channel
-with some given data.
-Sending left will preserve effects, etc. Sending right will play back raw.
-** TODO chip mode vs sample mode
-Make channel use either absolute pitch or relative pitch
+with some given data. For drums or any one-time samples.
+
+Sends can be left, right, or stereo.
+** DONE chip mode vs sample mode
+Make channel use either absolute pitch or relative pitch.
+
+Marking this as done because you know what? Sends are the solution to
+this. It's both modes at once. Want a non-looping, pitched or
+sample-rate based sample? Send it. Custom chips aren't a feature right
+now, and I don't know if they're even needed. Fundamental waves do
+more than I can fathom already.
 ** TODO create mixer demo, sequence gen helpers
 ** TODO context interface, create one with wave out
+Not sure if this is really needed to be honest. Seems a bit more OOP
+than current route.
 
-* Optimizations
-** TODO assess converting things to 32-bit
+** DONE assess converting audio things to 32-bit
 It would help portability a lot to use 32bit numbers. In addition, it
 keeps things more limited and less likely to break.
 
+I did this because I think if you have 32 bits at say, 48000hz, you're
+getting precision to represent more than enough pitches. I did no math
+here, nor listening tests, so I could be wrong.
+
+Also, adding extra precision seems to even make periodic sounds, and
+the length (and noticability) of that period increases when precision
+is added. Food for thought.
+
+** TODO investigate threading
+There's currently a rare bug where Filter is set to zero. I need to
+learn more about how threads can collide.
+
+** TODO make channel pairs more...pair-y
+Possibly have mono volume and panning rather than L and R volumes.
+Possibly allow for stereo phase offset in PM mode.  If this does make
+mixer code more complex, consider this stuff for the wrapper, if that
+ever becomes a thing.
 * Video
 ** TODO create video initialization, cleanly with audio
