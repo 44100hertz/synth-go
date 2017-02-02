@@ -8,11 +8,29 @@ not meant to be modified, implement getters.
 Done: Things get exported in a way that can be modified. No getters
 though. User is free to break things, and that's okay. It's obvious
 what's meant to be touched, at least so far.
+** TODO stereo mixer!!
+** TODO better range checking to squash bugs
+Go ahead, try delay a wave that doesn't get shut off.
+Also, it's probably bad to mix by negative values?
 ** TODO more mixer functionality, e.g. what's in spec
-** TODO make delay and filter samplerate independant
+ - [X] Wave index, offset, length. Passed to wave callback, length used
+   for looping.
+ - [X] Volume, slide. Affects effects.
+ - [X] Mixer Volume, slide. Applied after effects.
+ - [X] Note Pitch, slide
+ - [ ] LFO; level, speed, mode (volume(T), pitch(V), both, off)
+ - [X] IIR pitch, slide, length 2^n, level
+ - [X] Delay offset, volume
+ - [ ] Loop mode (off, normal, swap)
+ - [ ] Delay mode (off, forward, pingpong)
+ - [ ] ADSR envelope for each note
+** DONE make delay and filter samplerate independant
  - [X] Set the delay in number of ticks.
  - [X] Update the delay every tick based on the tickrate/bpm aswell.
- - [ ] Set the filter to a note based on sample rate.
+ - [ ] Set filter based on length in µs
+^ Actually, this can't work! Reasonable filters are limited as heck!
+I'd say just double or halve the filter based on sample rate, just to
+make it a bit more consistant. It's the best you can do.
 ** DONE integrate IIR as extension to delay
 ** TODO proper channel pairs
 ** TODO mixer close timing

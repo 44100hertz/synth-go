@@ -58,16 +58,5 @@ using a callback that passes in song data. Wave data also uses a callback.
  - Mode (Stereo, PM, AM, Sync)
  - Raw mode
 *** Channel params
- - [X] Wave index, offset, length. Passed to wave callback, length used
-   for looping.
- - [X] Volume, slide. Affects effects.
- - [X] Mixer Volume, slide. Applied after effects.
- - [X] Note Pitch, slide
- - [ ] LFO; level, speed, mode (volume(T), pitch(V), both, off)
- - [X] IIR pitch, slide, length 2^n, level
- - [X] Delay offset, volume
- - [ ] Loop mode (off, normal, swap)
- - [ ] Delay mode (off, forward, pingpong)
- - [ ] ADSR envelope for each note
 * Input
 * Misc
