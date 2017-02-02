@@ -8,10 +8,12 @@ not meant to be modified, implement getters.
 Done: Things get exported in a way that can be modified. No getters
 though. User is free to break things, and that's okay. It's obvious
 what's meant to be touched, at least so far.
-** TODO stereo mixer!!
+** DONE stereo mixer!!
 ** TODO better range checking to squash bugs
 Go ahead, try delay a wave that doesn't get shut off.
+^ okay, that has been  marginally fixed.
 Also, it's probably bad to mix by negative values?
+^ Will think about.
 ** TODO more mixer functionality, e.g. what's in spec
  - [X] Wave index, offset, length. Passed to wave callback, length used
    for looping.
