@@ -155,31 +155,43 @@ func (m *Mixer) tick() {
 
 // Run a pair of Chs
 func (m *Mixer) startPair(i int) {
-	l := &m.Ch[i*2]
-
-	for {
+	update := func(c *Channel) int32 {
 		// Set phase and grab wave
-		l.Phase = (l.Phase + l.Period) % l.Len
-		wave := int32(m.wave(l.Wave, uint32(l.Phase>>32)))
-		wave = int32((wave * l.Vol) >> 16)
+		c.Phase = (c.Phase + c.Period) % c.Len
+		wave := int32(m.wave(c.Wave, uint32(c.Phase>>32)))
+		wave = int32((wave * c.Vol) >> 16)
 
 		// Apply delay effect
 		// Important that this is done first
-		var delayStart uint16 = l.histHead - l.delay
-		var delayEnd uint16 = delayStart - l.Filter
-		l.delayAvg += int32(l.hist[delayStart]) / int32(l.Filter)
-		l.delayAvg -= int32(l.hist[delayEnd]) / int32(l.Filter)
-		wave = l.delayAvg*l.DelayLevel>>16 + wave
+		var delayStart uint16 = c.histHead - c.delay
+		var delayEnd uint16 = delayStart - c.Filter
+		c.delayAvg += int32(c.hist[delayStart]) / int32(c.Filter)
+		c.delayAvg -= int32(c.hist[delayEnd]) / int32(c.Filter)
+		wave = c.delayAvg*c.DelayLevel>>16 + wave
 
 		// Store history for delay effect
-		l.hist[l.histHead] = int16(wave)
-		l.histHead++
+		c.hist[c.histHead] = int16(wave)
+		c.histHead++
 
-		m.chans[i] <- int32((wave * l.MVol) >> 16)
+		return wave
+	}
+
+	l := &m.Ch[i*2]
+	r := &m.Ch[i*2+1]
+	for {
+		left := update(l)
+		right := update(r)
+		m.chans[i] <- int32((left * l.MVol) >> 16)
+		m.chans[i] <- int32((right * r.MVol) >> 16)
 	}
 }
 
 func getNote(note int32, tune int32) float64 {
 	totalNote := float64(note) + float64(tune)/0x8000
 	return math.Pow(2, (totalNote-60)/12.0) * 440
+}
+
+func (m *Mixer) OnPair(i int, op func(*Channel)) {
+	op(&m.Ch[i*2])
+	op(&m.Ch[i*2+1])
 }

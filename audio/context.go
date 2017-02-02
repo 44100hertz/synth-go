@@ -27,10 +27,13 @@ func callback(userdata unsafe.Pointer, stream *C.Uint8, length C.int) {
 	hdr := reflect.SliceHeader{Data: uintptr(unsafe.Pointer(stream)), Len: n, Cap: n}
 	buf := *(*[]C.Uint8)(unsafe.Pointer(&hdr))
 
-	for i := 0; i < n; i += 2 {
-		nextSamp := <-output
-		buf[i] = C.Uint8(nextSamp & 0xff)
-		buf[i+1] = C.Uint8(nextSamp >> 8)
+	for i := 0; i < n; i += 4 {
+		left := <-output
+		buf[i] = C.Uint8(left & 0xff)
+		buf[i+1] = C.Uint8(left >> 8)
+		right := <-output
+		buf[i+2] = C.Uint8(right & 0xff)
+		buf[i+3] = C.Uint8(right >> 8)
 	}
 }
 
@@ -44,7 +47,7 @@ func Start(m *Mixer) {
 		freq:     48000,
 		format:   C.AUDIO_S16,
 		samples:  1024,
-		channels: 1,
+		channels: 2,
 		callback: C.SDL_AudioCallback(C.callback),
 	}
 	var have C.SDL_AudioSpec
