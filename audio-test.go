@@ -12,6 +12,6 @@ func main() {
 	m.Ch[0].Note = 1            // C#-0 as base note
 	m.Ch[0].DelayNote = 48      // C-5 as note to pluck
 	m.Ch[0].DelayLevel = 0xFFF0 // A bit of delay attenuation
-	m.Ch[0].DelayFilter = 0x3   // Use a delay averaged by 3 samples
+	m.Ch[0].Filter = 0x3        // Use a delay averaged by 3 samples
 	audio.Start(&m)
 }
