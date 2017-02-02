@@ -60,6 +60,6 @@ func Start(m *Mixer) {
 
 	// Play 1 second of audio
 	C.SDL_PauseAudioDevice(dev, 0)
-	time.Sleep(time.Second * 10)
+	time.Sleep(time.Second * 30)
 	C.SDL_CloseAudioDevice(dev)
 }
