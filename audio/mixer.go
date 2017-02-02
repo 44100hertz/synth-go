@@ -10,6 +10,7 @@
 package audio
 
 import "math"
+import "fmt"
 
 // The number of channel pairs, or mixer chans
 const NumChans int = 2
@@ -40,6 +41,7 @@ type Channel struct {
 	Len, Phase      uint64 // Length of wave and position in wave
 	Period          uint64 // How much to increment phase for each point
 	DelayTicks      uint64 // Length of delay in ticks
+	DelayNote       int32  // Special delay timing used for guitar pluck
 	Delay           uint16 // Length of a delay effect in samples
 	DelayLevel      int32  // Level at which to mix in delay effect
 	DelayFilter     uint16 // Rectangular filter size 2^n added to delay
@@ -115,18 +117,23 @@ func (m *Mixer) tick() {
 		c.Note = c.Note + (c.Tune / 0x8000)
 		c.Tune = c.Tune % 0x8000
 
+		switch {
+		case c.DelayNote > 0:
+			c.Delay = uint16(float64(m.srate) /
+				getNote(c.DelayNote, 0))
+			fmt.Println(c.Delay)
+		case c.DelayTicks > 0:
+			c.Delay = uint16(c.DelayTicks * m.srate * 60 /
+				m.Bpm / m.TickRate)
+		}
 		// Cannot delay by amount 0
 		if c.DelayFilter == 0 {
 			c.DelayFilter = 1
 		}
 
-		if c.DelayTicks > 0 {
-			c.Delay = uint16(c.DelayTicks * m.srate * 60 /
-				m.Bpm / m.TickRate)
-		}
-
 		// Set pitch
-		c.Period = m.getPointPeriod(c.Len, c.Note, c.Tune)
+		rate := float64(c.Len / m.srate)
+		c.Period = uint64(rate * getNote(c.Note, c.Tune))
 	}
 	m.nextTick = 60*m.srate/m.Bpm/m.TickRate + m.count
 	m.tickCount++
@@ -159,14 +166,9 @@ func (m *Mixer) startPair(i int) {
 	}
 }
 
-// Calculate amount to add to phase to produce a given pitch
-func (m *Mixer) getPointPeriod(len uint64, note int32, tune int32) uint64 {
-	// Find point period for 1hz wave at given length
-	rate := float64(len / m.srate)
-	// Find desired pitch in hertz
+func getNote(note int32, tune int32) float64 {
 	totalNote := float64(note) + float64(tune)/0x8000
-	pitch := math.Pow(2, (totalNote-60)/12.0) * 440
-	return uint64(rate * pitch)
+	return math.Pow(2, (totalNote-60)/12.0) * 440
 }
 
 func (m *Mixer) ForAllCh(op func(*Channel)) {
