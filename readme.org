@@ -1,0 +1,5 @@
+* What is this now?
+This is an audio synth/mixer in progress, built around SDL.
+
+* What does it want to be?
+I want this to be a fun way to make games or other audio/visual programs.
