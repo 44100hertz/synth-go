@@ -84,7 +84,7 @@ func (m *Mixer) Start(output chan int16, srate uint64) {
 
 	// Start each channel pair wave output
 	for i := range m.chans {
-		m.chans[i] = make(chan int32)
+		m.chans[i] = make(chan int32, 128)
 		go m.startPair(i)
 	}
 
