@@ -26,6 +26,6 @@ func main() {
 	m.Ch[1].Filter = 3
 	m.Ch[1].VolSlide = -0x1
 
-	audio.Start(&m)
-
+	//	audio.Start(&m)
+	audio.WaveOut(&m, "out.raw", 48000)
 }
