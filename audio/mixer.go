@@ -10,7 +10,6 @@
 package audio
 
 import "math"
-import "fmt"
 
 // The number of channel pairs, or mixer chans
 const NumChans int = 2
@@ -121,7 +120,6 @@ func (m *Mixer) tick() {
 		case c.DelayNote > 0:
 			c.Delay = uint16(float64(m.srate) /
 				getNote(c.DelayNote, 0))
-			fmt.Println(c.Delay)
 		case c.DelayTicks > 0:
 			c.Delay = uint16(c.DelayTicks * m.srate * 60 /
 				m.Bpm / m.TickRate)
