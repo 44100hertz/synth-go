@@ -41,7 +41,7 @@ type Channel struct {
 	Period          uint64 // How much to increment phase for each point
 	DelayTicks      uint64 // Length of delay in ticks
 	DelayNote       int32  // Special delay timing used for guitar pluck
-	Delay           uint16 // Length of a delay effect in samples
+	delay           uint16 // Length of a delay effect in samples
 	DelayLevel      int32  // Level at which to mix in delay effect
 	DelayFilter     uint16 // Rectangular filter size 2^n added to delay
 
@@ -60,10 +60,12 @@ func NewMixer(wave func(int, uint32) int16, seq func(*Mixer)) Mixer {
 		TickRate:  24,
 		TickSpeed: 6,
 	}
+	// Default params
 	for i := range m.Ch {
 		c := &m.Ch[i]
 		c.MVol = 0x8000
 		c.Note = 60
+		c.Len = 0x10000 << 32
 	}
 	return m
 }
@@ -119,10 +121,10 @@ func (m *Mixer) tick() {
 
 		switch {
 		case c.DelayNote > 0:
-			c.Delay = uint16(float64(m.srate) /
+			c.delay = uint16(float64(m.srate) /
 				getNote(c.DelayNote, 0))
 		case c.DelayTicks > 0:
-			c.Delay = uint16(c.DelayTicks * m.srate * 60 /
+			c.delay = uint16(c.DelayTicks * m.srate * 60 /
 				m.Bpm / m.TickRate)
 		}
 		// Cannot delay by amount 0
@@ -141,8 +143,6 @@ func (m *Mixer) tick() {
 // Run a pair of Chs
 func (m *Mixer) startPair(i int) {
 	l := &m.Ch[i*2]
-	// basic test code
-	l.Len = 0x10000 << 32
 	for {
 		// Set phase and grab wave
 		l.Phase = (l.Phase + l.Period) % l.Len
@@ -151,7 +151,7 @@ func (m *Mixer) startPair(i int) {
 
 		// Apply delay effect
 		// Important that this is done first
-		var delayStart uint16 = l.histHead - l.Delay
+		var delayStart uint16 = l.histHead - l.delay
 		var delayEnd uint16 = delayStart - l.DelayFilter
 		l.delayAvg += int32(l.hist[delayStart]) / int32(l.DelayFilter)
 		l.delayAvg -= int32(l.hist[delayEnd]) / int32(l.DelayFilter)
