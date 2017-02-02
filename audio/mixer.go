@@ -60,10 +60,11 @@ func NewMixer(wave func(int, uint32) int16, seq func(*Mixer)) Mixer {
 		TickRate:  24,
 		TickSpeed: 6,
 	}
-	m.ForAllCh(func(c *Channel) {
+	for i := range m.Ch {
+		c := &m.Ch[i]
 		c.MVol = 0x8000
 		c.Note = 60
-	})
+	}
 	return m
 }
 
@@ -167,10 +168,4 @@ func (m *Mixer) startPair(i int) {
 func getNote(note int32, tune int32) float64 {
 	totalNote := float64(note) + float64(tune)/0x8000
 	return math.Pow(2, (totalNote-60)/12.0) * 440
-}
-
-func (m *Mixer) ForAllCh(op func(*Channel)) {
-	for i := range m.Ch {
-		op(&m.Ch[i])
-	}
 }
