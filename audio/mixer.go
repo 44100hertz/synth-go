@@ -43,7 +43,7 @@ type Channel struct {
 	DelayNote       int32  // Special delay timing used for guitar pluck
 	delay           uint16 // Length of a delay effect in samples
 	DelayLevel      int32  // Level at which to mix in delay effect
-	DelayFilter     uint16 // Rectangular filter size 2^n added to delay
+	Filter          uint16 // Rectangular filter added to delay
 
 	hist     [1 << 16]int16 // 64kb of channel history
 	histHead uint16         // Current history location
@@ -128,8 +128,8 @@ func (m *Mixer) tick() {
 				m.Bpm / m.TickRate)
 		}
 		// Cannot delay by amount 0
-		if c.DelayFilter == 0 {
-			c.DelayFilter = 1
+		if c.Filter == 0 {
+			c.Filter = 1
 		}
 
 		// Set pitch
@@ -152,9 +152,9 @@ func (m *Mixer) startPair(i int) {
 		// Apply delay effect
 		// Important that this is done first
 		var delayStart uint16 = l.histHead - l.delay
-		var delayEnd uint16 = delayStart - l.DelayFilter
-		l.delayAvg += int32(l.hist[delayStart]) / int32(l.DelayFilter)
-		l.delayAvg -= int32(l.hist[delayEnd]) / int32(l.DelayFilter)
+		var delayEnd uint16 = delayStart - l.Filter
+		l.delayAvg += int32(l.hist[delayStart]) / int32(l.Filter)
+		l.delayAvg -= int32(l.hist[delayEnd]) / int32(l.Filter)
 		wave = l.delayAvg*l.DelayLevel>>16 + wave
 
 		// Store history for delay effect
