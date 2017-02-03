@@ -104,7 +104,6 @@ func (m *Mixer) Start(output chan int16, srate uint32) {
 			m.seq(m)
 			m.tickCount = 0
 		}
-		// Total the mix
 		var mixL int32 = 0
 		var mixR int32 = 0
 		for i := range m.chans {
@@ -132,7 +131,7 @@ func (m *Mixer) tick() {
 		// Set delay amount
 		dn, ok := c.DelayNote.(int32)
 		if ok {
-			c.delay = uint16(float64(m.srate) / getNote(dn<<16))
+			c.delay = uint16(float64(m.srate) / getNote(dn))
 			c.DelayNote = nil
 			c.delayAvg = 0
 		}
