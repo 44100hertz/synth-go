@@ -39,18 +39,18 @@ const (
 
 // Internal channel data
 type Channel struct {
-	Wave        int    // Index of wave to use for wave function
-	PairMode    int    // Pair mode. See above.
-	Note, Slide int32  // Midi note number
-	Vol, Fade   int32  // Pre-Volume that affects effects
-	MVol, MFade int32  // Mixer volume; after effects
-	Len, Phase  uint32 // Length of wave and position in wave
-	Period      uint32 // How much to increment phase for each point
-	DelayTicks  uint32 // Length of delay in ticks
-	DelayNote   int32  // Special delay timing used for guitar pluck
-	delay       uint16 // Length of a delay effect in samples
-	DelayLevel  int32  // Level at which to mix in delay effect
-	Filter      uint16 // Rectangular filter added to delay
+	Wave        int         // Index of wave to use for wave function
+	PairMode    int         // Pair mode. See above.
+	Note, Slide int32       // Midi note number
+	Vol, Fade   int32       // Pre-Volume that affects effects
+	MVol, MFade int32       // Mixer volume; after effects
+	Len, Phase  uint32      // Length of wave and position in wave
+	Period      uint32      // How much to increment phase for each point
+	DelayTicks  interface{} // Length of delay in ticks
+	DelayNote   interface{} // Special delay timing used for guitar pluck
+	delay       uint16      // Length of a delay effect in samples
+	DelayLevel  int32       // Level at which to mix in delay effect
+	Filter      uint16      // Rectangular filter added to delay
 
 	hist     [1 << 16]int16 // 64kb of channel history
 	histHead uint16         // Current history location
@@ -124,15 +124,19 @@ func (m *Mixer) tick() {
 		c.MVol += c.MFade
 
 		// Set delay amount
-		switch {
-		case c.DelayNote > 0:
-			c.delay = uint16(float64(m.srate) /
-				getNote(c.DelayNote<<16))
-		case c.DelayTicks > 0:
-			c.delay = uint16(c.DelayTicks * m.srate * 60 /
+		dn, ok := c.DelayNote.(int32)
+		if ok {
+			c.delay = uint16(float64(m.srate) / getNote(dn<<16))
+			c.DelayNote = nil
+			c.delayAvg = 0
+		}
+
+		dt, ok := c.DelayTicks.(uint32)
+		if ok {
+			c.delay = uint16(dt * m.srate * 60 /
 				m.Bpm / m.TickRate)
-		default:
-			c.delay = 0
+			c.DelayTicks = nil
+			c.delayAvg = 0
 		}
 
 		// Cannot filter by 0
