@@ -54,9 +54,9 @@ type Channel struct {
 	delay      uint16         // Length of a delay effect in samples
 	DelayTicks interface{}    // Length of delay in ticks
 	DelayNote  interface{}    // Special delay timing used for guitar pluck
-	DelayLevel int32          // Level at which to mix in delay effect
+	DelayVol   int32          // Level at which to mix in delay effect
 	Filter     uint16         // Rectangular filter added to delay
-	hist       [1 << 16]int16 // 64kb of channel history
+	hist       [1 << 16]int32 // 64kb of channel history
 	histHead   uint16         // Current history location
 	delayAvg   int32          // Rolling average tracker for delay
 	out        int32          // Temporary storage val for channel output
@@ -75,7 +75,7 @@ func NewMixer(wave func(int, uint32) int16, seq func(*Mixer)) Mixer {
 	// Default params
 	for i := range m.Ch {
 		c := &m.Ch[i]
-		c.MVol = 0x8000
+		c.MVol = 0x4000
 		c.Note = 60 << 16
 		c.Len = 0x10000
 	}
@@ -105,12 +105,14 @@ func (m *Mixer) Start(output chan int16, srate uint32) {
 			m.tickCount = 0
 		}
 		// Total the mix
-		var mix int32 = 0
+		var mixL int32 = 0
+		var mixR int32 = 0
 		for i := range m.chans {
-			mix += <-m.chans[i]
+			mixL += <-m.chans[i] * m.Ch[i*2].MVol >> 16
+			mixR += <-m.chans[i] * m.Ch[i*2+1].MVol >> 16
 		}
-		mix = clamp16(mix)
-		output <- int16(mix)
+		output <- int16(clamp16(mixL))
+		output <- int16(clamp16(mixR))
 		m.count++
 	}
 
@@ -149,8 +151,7 @@ func (m *Mixer) tick() {
 		}
 
 		// Set pitch
-		rate := float64(c.Len / m.srate)
-		c.period = uint32(rate * getNote(c.Note))
+		c.period = uint32(float64(c.Len/m.srate) * getNote(c.Note))
 	}
 	m.nextTick = 60*m.srate/m.Bpm/m.TickRate + m.count
 	m.tickCount++
@@ -169,12 +170,12 @@ func (m *Mixer) startPair(i int) {
 		c.delayAvg -= int32(c.hist[delayEnd]) / int32(c.Filter)
 		c.delayAvg = clamp16(c.delayAvg)
 
-		// Get a wave outputxo
-		wave := int32(m.wave(c.Wave, c.Phase))
-		c.out = wave*int32(c.Vol)>>16 + c.delayAvg*c.DelayLevel>>16
+		// Get a wave output
+		c.out = int32(m.wave(c.Wave, c.Phase))*c.Vol>>16 +
+			c.delayAvg*c.DelayVol>>16
 
 		// Store history for delay effect
-		c.hist[c.histHead] = int16(c.out)
+		c.hist[c.histHead] = c.out
 		c.histHead++
 	}
 
@@ -187,15 +188,15 @@ func (m *Mixer) startPair(i int) {
 			filter(l)
 			r.Phase = uint32(l.out + 0x8000)
 			filter(r)
-			m.chans[i] <- r.out * l.MVol >> 16
-			m.chans[i] <- r.out * r.MVol >> 16
+			m.chans[i] <- r.out
+			m.chans[i] <- r.out
 		default:
 			phase(l)
 			phase(r)
 			filter(l)
 			filter(r)
-			m.chans[i] <- l.out * l.MVol >> 16
-			m.chans[i] <- r.out * r.MVol >> 16
+			m.chans[i] <- l.out
+			m.chans[i] <- r.out
 		}
 	}
 }
