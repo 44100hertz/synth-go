@@ -39,18 +39,20 @@ const (
 
 // Internal channel data
 type Channel struct {
-	Wave        int         // Index of wave to use for wave function
-	PairMode    int         // Pair mode. See above.
-	Note, Slide int32       // Midi note number
-	Vol, Fade   int32       // Pre-Volume that affects effects
-	MVol, MFade int32       // Mixer volume; after effects
-	Len, Phase  uint32      // Length of wave and position in wave
-	Period      uint32      // How much to increment phase for each point
-	DelayTicks  interface{} // Length of delay in ticks
-	DelayNote   interface{} // Special delay timing used for guitar pluck
-	delay       uint16      // Length of a delay effect in samples
-	DelayLevel  int32       // Level at which to mix in delay effect
-	Filter      uint16      // Rectangular filter added to delay
+	Wave        int    // Index of wave to use for wave function
+	PairMode    int    // Pair mode. See above.
+	Note, Slide int32  // Midi note number
+	Vol         uint32 // Pre-Volume that affects effects
+	MVol        uint32 // Mixer volume; after effects
+	Fade, MFade int32  // Per-tick volume adjustment
+	Len, Phase  uint32 // Length of wave and position in wave
+	period      uint32 // How much to increment phase for each point
+
+	delay      uint16      // Length of a delay effect in samples
+	DelayTicks interface{} // Length of delay in ticks
+	DelayNote  interface{} // Special delay timing used for guitar pluck
+	DelayLevel int32       // Level at which to mix in delay effect
+	Filter     uint16      // Rectangular filter added to delay
 
 	hist     [1 << 16]int16 // 64kb of channel history
 	histHead uint16         // Current history location
@@ -143,13 +145,10 @@ func (m *Mixer) tick() {
 		if c.Filter < 1 {
 			c.Filter = 1
 		}
-		if c.Vol < 0 {
-			c.Vol = 0
-		}
 
 		// Set pitch
 		rate := float64(c.Len / m.srate)
-		c.Period = uint32(rate * getNote(c.Note))
+		c.period = uint32(rate * getNote(c.Note))
 	}
 	m.nextTick = 60*m.srate/m.Bpm/m.TickRate + m.count
 	m.tickCount++
@@ -158,7 +157,7 @@ func (m *Mixer) tick() {
 // Run a pair of Chs
 func (m *Mixer) startPair(i int) {
 	phase := func(c *Channel) {
-		c.Phase = (c.Phase + c.Period) % c.Len
+		c.Phase = (c.Phase + c.period) % c.Len
 	}
 	filter := func(c *Channel) {
 		// Calculate delay
