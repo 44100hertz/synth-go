@@ -81,9 +81,14 @@ func NewMixer(wave func(int, uint32) int16, seq func(*Mixer)) Mixer {
 func (m *Mixer) Start(output chan int16, srate uint32) {
 	m.srate = srate
 
-	// Start each channel pair wave output
 	for i := range m.chans {
-		m.chans[i] = make(chan int32, 128)
+		// Go is known to hang for up to 4ms at absolute most.
+		// This would put my ideal GC amount at 48*4 = 192 And
+		// because of stereo, that's actually 384. This was at
+		// 128 before, and was still underrunning. It's
+		// important to notice this in addition to the SDL
+		// audio buffer.
+		m.chans[i] = make(chan int32, 384)
 		go m.startPair(i)
 	}
 
