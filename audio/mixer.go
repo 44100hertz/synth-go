@@ -39,25 +39,27 @@ const (
 
 // Internal channel data
 type Channel struct {
-	Wave        int    // Index of wave to use for wave function
-	PairMode    int    // Pair mode. See above.
-	Note, Slide int32  // Midi note number
-	Vol         uint32 // Pre-Volume that affects effects
-	MVol        uint32 // Mixer volume; after effects
-	Fade, MFade int32  // Per-tick volume adjustment
-	Len, Phase  uint32 // Length of wave and position in wave
-	period      uint32 // How much to increment phase for each point
+	Wave     int // Index of wave to use for wave function
+	PairMode int // Pair mode. See above.
 
-	delay      uint16      // Length of a delay effect in samples
-	DelayTicks interface{} // Length of delay in ticks
-	DelayNote  interface{} // Special delay timing used for guitar pluck
-	DelayLevel int32       // Level at which to mix in delay effect
-	Filter     uint16      // Rectangular filter added to delay
+	Note, Slide int32 // Midi note number
 
-	hist     [1 << 16]int16 // 64kb of channel history
-	histHead uint16         // Current history location
-	delayAvg int32          // Rolling average tracker for delay
-	out      int32          // Temporary storage val for channel output
+	Vol         int32 // Pre-Volume that affects effects
+	MVol        int32 // Mixer volume; after effects
+	Fade, MFade int32 // Per-tick volume adjustment
+
+	Len, Phase uint32 // Length of wave and position in wave
+	period     uint32 // How much to increment phase for each point
+
+	delay      uint16         // Length of a delay effect in samples
+	DelayTicks interface{}    // Length of delay in ticks
+	DelayNote  interface{}    // Special delay timing used for guitar pluck
+	DelayLevel int32          // Level at which to mix in delay effect
+	Filter     uint16         // Rectangular filter added to delay
+	hist       [1 << 16]int16 // 64kb of channel history
+	histHead   uint16         // Current history location
+	delayAvg   int32          // Rolling average tracker for delay
+	out        int32          // Temporary storage val for channel output
 }
 
 func NewMixer(wave func(int, uint32) int16, seq func(*Mixer)) Mixer {
@@ -107,7 +109,7 @@ func (m *Mixer) Start(output chan int16, srate uint32) {
 		for i := range m.chans {
 			mix += <-m.chans[i]
 		}
-		clamp16(&mix)
+		mix = clamp16(mix)
 		output <- int16(mix)
 		m.count++
 	}
@@ -122,8 +124,8 @@ func (m *Mixer) tick() {
 
 		// Sliding values
 		c.Note += c.Slide
-		c.Vol += c.Fade
-		c.MVol += c.MFade
+		c.Vol = max(c.Vol+c.Fade, 0)
+		c.MVol = max(c.MVol+c.MFade, 0)
 
 		// Set delay amount
 		dn, ok := c.DelayNote.(int32)
@@ -142,7 +144,7 @@ func (m *Mixer) tick() {
 		}
 
 		// Cannot filter by 0
-		if c.Filter < 1 {
+		if c.Filter == 0 {
 			c.Filter = 1
 		}
 
@@ -165,11 +167,11 @@ func (m *Mixer) startPair(i int) {
 		var delayEnd uint16 = delayStart - c.Filter
 		c.delayAvg += int32(c.hist[delayStart]) / int32(c.Filter)
 		c.delayAvg -= int32(c.hist[delayEnd]) / int32(c.Filter)
-		clamp16(&c.delayAvg)
+		c.delayAvg = clamp16(c.delayAvg)
 
 		// Get a wave outputxo
 		wave := int32(m.wave(c.Wave, c.Phase))
-		c.out = int32((wave*c.Vol)>>16) + c.delayAvg*c.DelayLevel>>16
+		c.out = wave*int32(c.Vol)>>16 + c.delayAvg*c.DelayLevel>>16
 
 		// Store history for delay effect
 		c.hist[c.histHead] = int16(c.out)
@@ -185,15 +187,15 @@ func (m *Mixer) startPair(i int) {
 			filter(l)
 			r.Phase = uint32(l.out + 0x8000)
 			filter(r)
-			m.chans[i] <- int32((r.out * l.MVol) >> 16)
-			m.chans[i] <- int32((r.out * r.MVol) >> 16)
+			m.chans[i] <- r.out * l.MVol >> 16
+			m.chans[i] <- r.out * r.MVol >> 16
 		default:
 			phase(l)
 			phase(r)
 			filter(l)
 			filter(r)
-			m.chans[i] <- int32((l.out * l.MVol) >> 16)
-			m.chans[i] <- int32((r.out * r.MVol) >> 16)
+			m.chans[i] <- l.out * l.MVol >> 16
+			m.chans[i] <- r.out * r.MVol >> 16
 		}
 	}
 }
@@ -208,10 +210,18 @@ func (m *Mixer) OnPair(i int, op func(*Channel)) {
 	op(&m.Ch[i*2+1])
 }
 
-func clamp16(a *int32) {
-	if *a < -0x8000 {
-		*a = -0x8000
-	} else if *a > 0x7fff {
-		*a = 0x7fff
+func clamp16(a int32) int32 {
+	if a < -0x8000 {
+		return -0x8000
+	} else if a > 0x7fff {
+		return 0x7fff
 	}
+	return a
+}
+
+func max(a int32, max int32) int32 {
+	if a < max {
+		return max
+	}
+	return a
 }
