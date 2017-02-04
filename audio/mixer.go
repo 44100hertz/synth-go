@@ -59,7 +59,6 @@ type Channel struct {
 	hist       [1 << 16]int32 // 64kb of channel history
 	histHead   uint16         // Current history location
 	delayAvg   int32          // Rolling average tracker for delay
-	out        int32          // Temporary storage val for channel output
 }
 
 func NewMixer(wave func(int, uint32) int16, seq func(*Mixer)) Mixer {
@@ -158,10 +157,11 @@ func (m *Mixer) tick() {
 
 // Run a pair of Chs
 func (m *Mixer) startPair(i int) {
-	phase := func(c *Channel) {
+	phase := func(c *Channel) uint32 {
 		c.Phase = (c.Phase + c.period) % c.Len
+		return c.Phase
 	}
-	filter := func(c *Channel) {
+	wave := func(c *Channel, phase uint32) int32 {
 		// Calculate delay
 		var delayStart uint16 = c.histHead - c.delay
 		var delayEnd uint16 = delayStart - c.Filter
@@ -170,12 +170,13 @@ func (m *Mixer) startPair(i int) {
 		c.delayAvg = clamp16(c.delayAvg)
 
 		// Get a wave output
-		c.out = int32(m.wave(c.Wave, c.Phase))*c.Vol>>16 +
+		wave := int32(m.wave(c.Wave, phase))*c.Vol>>16 +
 			c.delayAvg*c.DelayVol>>16
 
 		// Store history for delay effect
-		c.hist[c.histHead] = c.out
+		c.hist[c.histHead] = wave
 		c.histHead++
+		return wave
 	}
 
 	l := &m.Ch[i*2]
@@ -183,19 +184,15 @@ func (m *Mixer) startPair(i int) {
 	for {
 		switch l.PairMode {
 		case PAIR_PM:
-			phase(l)
-			filter(l)
-			r.Phase = uint32(l.out + 0x8000)
-			filter(r)
-			m.chans[i] <- r.out
-			m.chans[i] <- r.out
+			// Use the wave of the left channel as the
+			// phase of the right one.
+			lwave := uint32(wave(l, phase(l))) + 0x8000
+			wave := wave(r, lwave)
+			m.chans[i] <- wave
+			m.chans[i] <- wave
 		default:
-			phase(l)
-			phase(r)
-			filter(l)
-			filter(r)
-			m.chans[i] <- l.out
-			m.chans[i] <- r.out
+			m.chans[i] <- wave(l, phase(l))
+			m.chans[i] <- wave(r, phase(r))
 		}
 	}
 }
