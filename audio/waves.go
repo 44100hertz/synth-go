@@ -96,22 +96,26 @@ func Ramp(off uint32) int16 {
 	return 0
 }
 
+const (
+	WAVES_SINE = iota
+	WAVES_HSINE
+	WAVES_CSINE
+	WAVES_QSINE
+	WAVES_PULSE
+	WAVES_RAMP
+)
+
+var wavefns []func(uint32) int16 = []func(uint32) int16{
+	Sine,
+	HalfSine,
+	CamelSine,
+	QuarterSine,
+	Pulse,
+	Ramp,
+	Sine,
+}
+
 // General wave getting function
 func Waves(index int, off uint32) int16 {
-	switch index {
-	case 0:
-		return Sine(off)
-	case 1:
-		return HalfSine(off)
-	case 2:
-		return CamelSine(off)
-	case 3:
-		return QuarterSine(off)
-	case 4:
-		return Pulse(off)
-	case 5:
-		return Ramp(off)
-	default:
-		return Sine(off)
-	}
+	return wavefns[index](off)
 }
