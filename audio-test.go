@@ -20,7 +20,7 @@ func main() {
 		// c.Note = 1            // C#-0 as base note
 		// c.DelayLevel = 0xFFF0 // A bit of delay attenuation
 		// c.Filter = 0x3        // Use a delay averaged by 3 samples
-		c.Wave = audio.WAVE_QSINE
+		c.Wave = audio.WaveQSine
 		c.Fade = -0x1000
 		c.Note = 1
 		c.DelayVol = 0x8000
@@ -29,7 +29,7 @@ func main() {
 		c.FilterLen = 0x4
 	})
 
-	m.Bpm = 300
+	m.BPM = 300
 	audio.Start(&m)
 	//audio.WaveOut(&m, "out.raw", 48000)
 }

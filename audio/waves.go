@@ -97,12 +97,12 @@ func Ramp(off uint32) int16 {
 }
 
 const (
-	WAVE_SINE = iota
-	WAVE_HSINE
-	WAVE_CSINE
-	WAVE_QSINE
-	WAVE_PULSE
-	WAVE_RAMP
+	WaveSine = iota
+	WaveHSine
+	WaveCSine
+	WaveQSine
+	WavePulse
+	WaveRamp
 )
 
 var wavefns []func(uint32) int16 = []func(uint32) int16{
@@ -112,7 +112,6 @@ var wavefns []func(uint32) int16 = []func(uint32) int16{
 	QuarterSine,
 	Pulse,
 	Ramp,
-	Sine,
 }
 
 // General wave getting function

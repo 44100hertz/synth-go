@@ -29,17 +29,17 @@ type Mixer struct {
 
 	Ch        *[NumChans * 2]Channel  // Channels; pairs next to each other
 	chans     *[NumChans](chan int32) // Data back from channel pairs
-	Bpm       uint32                  // Song speed in beats per minute
+	BPM       uint32                  // Song speed in beats per minute
 	TickRate  uint32                  // Ticks per update
 	TickSpeed uint32                  // Callback after this many ticks
 	tickCount uint32                  // Counts down ticks until callback
 }
 
 const ( // Channel pairing modes
-	PAIR_STEREO = iota // Simple left and right channels
-	PAIR_PM            // Phase modulation
-	PAIR_AM            // Amplitude modulation
-	PAIR_SYNC          // Phase of left osc overflow = reset phase of right
+	PairStereo = iota // Simple left and right channels
+	PairPM            // Phase modulation
+	PairAM            // Amplitude modulation
+	PairSync          // Phase of left osc overflow = reset phase of right
 )
 
 // Internal channel data
@@ -73,7 +73,7 @@ func NewMixer(wave func(int, uint32) int16, seq func(*Mixer)) Mixer {
 		seq:       seq,
 		Ch:        new([NumChans * 2]Channel),
 		chans:     new([NumChans]chan int32),
-		Bpm:       120,
+		BPM:       120,
 		TickRate:  24,
 		TickSpeed: 6,
 	}
@@ -141,7 +141,7 @@ func (m *Mixer) tick() {
 		delayTicks, ok := c.DelayTicks.(uint32)
 		if ok {
 			c.delay = uint16(delayTicks * m.srate * 60 /
-				m.Bpm / m.TickRate)
+				m.BPM / m.TickRate)
 			c.DelayTicks = nil
 		}
 
@@ -153,7 +153,7 @@ func (m *Mixer) tick() {
 		// Set pitch
 		c.period = uint32(float64(c.Len/m.srate) * Note(c.Note))
 	}
-	m.nextTick = 60*m.srate/m.Bpm/m.TickRate + m.count
+	m.nextTick = 60*m.srate/m.BPM/m.TickRate + m.count
 	m.tickCount++
 }
 
@@ -185,7 +185,7 @@ func (m *Mixer) startPair(i int) {
 	r := &m.Ch[i*2+1]
 	for {
 		switch l.PairMode {
-		case PAIR_SYNC:
+		case PairSync:
 			// On new left osc cycle, new right osc cycle
 			phase(l)
 			phase(r)
@@ -195,7 +195,7 @@ func (m *Mixer) startPair(i int) {
 			rwave := wave(r, r.Phase)
 			m.chans[i] <- rwave
 			m.chans[i] <- rwave
-		case PAIR_PM:
+		case PairPM:
 			// Use the wave of the left osc as the
 			// phase of the right one.
 			phase(l)
@@ -203,7 +203,7 @@ func (m *Mixer) startPair(i int) {
 			rwave := wave(r, lwave)
 			m.chans[i] <- rwave
 			m.chans[i] <- rwave
-		case PAIR_AM:
+		case PairAM:
 			// Modulate amplitude of both waves
 			phase(l)
 			phase(r)
