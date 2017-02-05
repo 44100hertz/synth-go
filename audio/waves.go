@@ -97,12 +97,12 @@ func Ramp(off uint32) int16 {
 }
 
 const (
-	WAVES_SINE = iota
-	WAVES_HSINE
-	WAVES_CSINE
-	WAVES_QSINE
-	WAVES_PULSE
-	WAVES_RAMP
+	WAVE_SINE = iota
+	WAVE_HSINE
+	WAVE_CSINE
+	WAVE_QSINE
+	WAVE_PULSE
+	WAVE_RAMP
 )
 
 var wavefns []func(uint32) int16 = []func(uint32) int16{
