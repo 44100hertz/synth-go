@@ -2,9 +2,14 @@
  * mixer with added features.  Everything else is in this package is not
  * considered a part of the chip, but helps to use it.
  *
- * For most uint64's here, top 32 bits are used, bottom 32 are like a counter.
- * This should probably be altered to use all bits of uint32 and just cope
- * with the imprecision and limits.
+ * This works based on channel pairs.
+ * Even number channels (including 0) are "left", and odds are "right".
+ * For doing things to both channels, use OnPair.
+ *
+ * Note values are precise, as in 0xNNNNTTTT, N = midi note, T = fine tune.
+ * Amplitude values are 100% at 0x10000 or 1<<16.
+ * Many are signed, but below-zero values can have undefined behavior.
+ * Using more int32's just makes things easier in the long run.
  */
 
 package audio
@@ -30,7 +35,7 @@ type Mixer struct {
 	tickCount uint32                  // Counts down ticks until callback
 }
 
-const (
+const ( // Channel pairing modes
 	PAIR_STEREO = iota // Simple left and right channels
 	PAIR_PM            // Phase modulation
 	PAIR_AM            // Amplitude modulation
@@ -123,12 +128,10 @@ func (m *Mixer) tick() {
 	for i := range m.Ch {
 		c := &m.Ch[i]
 
-		// Sliding values
 		c.Note += c.Slide
 		c.Vol = max(c.Vol+c.Fade, 0)
 		c.MVol = max(c.MVol+c.MFade, 0)
 
-		// Set delay amount
 		delayNote, ok := c.DelayNote.(int32)
 		if ok {
 			c.delay = uint16(float64(m.srate) / Note(delayNote))
@@ -142,7 +145,7 @@ func (m *Mixer) tick() {
 			c.DelayTicks = nil
 		}
 
-		// Cannot filter by 0
+		// This avoids division by 0
 		if c.FilterLen == 0 {
 			c.FilterLen = 1
 		}
@@ -156,9 +159,11 @@ func (m *Mixer) tick() {
 
 // Run a pair of Chs
 func (m *Mixer) startPair(i int) {
+	// Update the phase of a given channel in a canonical way
 	phase := func(c *Channel) {
 		c.Phase = (c.Phase + c.period) % c.Len
 	}
+	// Update the internal channel and return a mixer-usable wave
 	wave := func(c *Channel, phase uint32) int32 {
 		// Calculate delay
 		var delayStart uint16 = c.histHead - c.delay
@@ -182,16 +187,16 @@ func (m *Mixer) startPair(i int) {
 		switch l.PairMode {
 		case PAIR_SYNC:
 			// On new left osc cycle, new right osc cycle
+			phase(l)
+			phase(r)
 			if l.Phase+l.period >= l.Len {
 				r.Phase = 0
 			}
-			phase(l)
-			phase(r)
 			rwave := wave(r, r.Phase)
 			m.chans[i] <- rwave
 			m.chans[i] <- rwave
 		case PAIR_PM:
-			// Use the wave of the left channel as the
+			// Use the wave of the left osc as the
 			// phase of the right one.
 			phase(l)
 			lwave := uint32(wave(l, l.Phase)) + 0x8000
