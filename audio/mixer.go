@@ -54,8 +54,9 @@ type Channel struct {
 	delay      uint16         // Length of a delay effect in samples
 	DelayTicks interface{}    // Length of delay in ticks
 	DelayNote  interface{}    // Special delay timing used for guitar pluck
-	DelayVol   int32          // Level at which to mix in delay effect
-	Filter     uint16         // Rectangular filter added to delay
+	DelayVol   int32          // Mixing level for delay effect
+	DelayLoop  int32          // Feedback mixing level for delay
+	FilterLen  uint16         // Rectangular filter added to delay
 	hist       [1 << 16]int32 // 64kb of channel history
 	histHead   uint16         // Current history location
 	delayAvg   int32          // Rolling average tracker for delay
@@ -128,24 +129,24 @@ func (m *Mixer) tick() {
 		c.MVol = max(c.MVol+c.MFade, 0)
 
 		// Set delay amount
-		dn, ok := c.DelayNote.(int32)
+		delayNote, ok := c.DelayNote.(int32)
 		if ok {
-			c.delay = uint16(float64(m.srate) / Note(dn))
+			c.delay = uint16(float64(m.srate) / Note(delayNote))
 			c.DelayNote = nil
 			c.delayAvg = 0
 		}
 
-		dt, ok := c.DelayTicks.(uint32)
+		delayTicks, ok := c.DelayTicks.(uint32)
 		if ok {
-			c.delay = uint16(dt * m.srate * 60 /
+			c.delay = uint16(delayTicks * m.srate * 60 /
 				m.Bpm / m.TickRate)
 			c.DelayTicks = nil
 			c.delayAvg = 0
 		}
 
 		// Cannot filter by 0
-		if c.Filter == 0 {
-			c.Filter = 1
+		if c.FilterLen == 0 {
+			c.FilterLen = 1
 		}
 
 		// Set pitch
@@ -163,19 +164,18 @@ func (m *Mixer) startPair(i int) {
 	wave := func(c *Channel, phase uint32) int32 {
 		// Calculate delay
 		var delayStart uint16 = c.histHead - c.delay
-		var delayEnd uint16 = delayStart - c.Filter
-		c.delayAvg += int32(c.hist[delayStart]) / int32(c.Filter)
-		c.delayAvg -= int32(c.hist[delayEnd]) / int32(c.Filter)
+		var delayEnd uint16 = delayStart - c.FilterLen
+		c.delayAvg += int32(c.hist[delayStart]) / int32(c.FilterLen)
+		c.delayAvg -= int32(c.hist[delayEnd]) / int32(c.FilterLen)
 		c.delayAvg = clamp16(c.delayAvg)
 
 		// Get a wave output
-		wave := int32(m.wave(c.Wave, phase))*c.Vol>>16 +
-			c.delayAvg*c.DelayVol>>16
+		dry := int32(m.wave(c.Wave, phase))
 
 		// Store history for delay effect
-		c.hist[c.histHead] = wave
+		c.hist[c.histHead] = dry + c.delayAvg*c.DelayLoop>>16
 		c.histHead++
-		return wave
+		return dry*c.Vol>>16 + c.delayAvg*c.DelayVol>>16
 	}
 
 	l := &m.Ch[i*2]
