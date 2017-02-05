@@ -133,7 +133,6 @@ func (m *Mixer) tick() {
 		if ok {
 			c.delay = uint16(float64(m.srate) / Note(delayNote))
 			c.DelayNote = nil
-			c.delayAvg = 0
 		}
 
 		delayTicks, ok := c.DelayTicks.(uint32)
@@ -141,7 +140,6 @@ func (m *Mixer) tick() {
 			c.delay = uint16(delayTicks * m.srate * 60 /
 				m.Bpm / m.TickRate)
 			c.DelayTicks = nil
-			c.delayAvg = 0
 		}
 
 		// Cannot filter by 0
