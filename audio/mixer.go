@@ -17,7 +17,7 @@ package audio
 import "math"
 
 // The number of channel pairs, or mixer chans
-const NumChans int = 2
+const NumChans int = 1
 
 type Mixer struct {
 	srate uint32                  // Sample rate
@@ -42,16 +42,18 @@ const ( // Channel pairing modes
 	PairSync          // Phase of left osc overflow = reset phase of right
 )
 
-// Internal channel data
+// The only reason that some of these are hidden is because they're
+// not samplerate-independant. The only exception is FilterLen, but
+// that's going to be handled eventually.
 type Channel struct {
 	Wave     int // Index of wave to use for wave function
 	PairMode int // Pair mode. See above.
 
 	Note, Slide int32 // Midi note number
 
-	Vol         int32 // Pre-Volume that affects effects
-	MVol        int32 // Mixer volume; after effects
-	Fade, MFade int32 // Per-tick volume adjustment
+	Vol  int32 // Pre-Volume that affects effects
+	MVol int32 // Mixer volume; after effects
+	Fade int32 // Mixer volume adjust. For internal, see Envelope.
 
 	Len, Phase uint32 // Length of wave and position in wave
 	period     uint32 // How much to increment phase for each point
@@ -65,6 +67,13 @@ type Channel struct {
 	hist       [1 << 16]int32 // 64kb of channel history
 	histHead   uint16         // Current history location
 	delayAvg   int32          // Rolling average tracker for delay
+
+	Attack  int32 // Rate
+	Decay   int32 // Rate
+	Sustain int32 // Level
+	Release int32 // Rate
+	EnvPos  int32 // How far into envelope in ticks
+	NoteOn  bool  // Whether or not to enter envelope release
 }
 
 func NewMixer(wave func(int, uint32) int16, seq func(*Mixer)) Mixer {
@@ -128,9 +137,29 @@ func (m *Mixer) tick() {
 	for i := range m.Ch {
 		c := &m.Ch[i]
 
+		// Sliding values.
 		c.Note += c.Slide
-		c.Vol = max(c.Vol+c.Fade, 0)
-		c.MVol = max(c.MVol+c.MFade, 0)
+		c.MVol = max(c.MVol+c.Fade, 0)
+		// Envelope values.
+		// If you don't want envelopes to overshoot, just set rates
+		// to 1<<16/[number of ticks it should take] and they'll
+		// be close enough that who even cares.
+		// Also, you can bypass envelope completely and just use
+		// Release as a volume slide and never enable NoteOn.
+		switch {
+		case c.Release < 1: // Test if has envelope
+		case !c.NoteOn:
+			// Note off
+			c.Vol = max(0, c.Vol-c.Release)
+		case c.EnvPos < 0x10000/c.Attack:
+			// Attack
+			c.Vol = min(0x10000, c.Vol+c.Attack)
+		case c.Vol > c.Sustain:
+			// Decay
+			c.Vol = max(0, c.Vol-c.Decay)
+		}
+		c.EnvPos++
+		// Sustain doesn't change volume, so there's no code for it
 
 		delayNote, ok := c.DelayNote.(int32)
 		if ok {
@@ -244,6 +273,13 @@ func clamp16(a int32) int32 {
 func max(a int32, max int32) int32 {
 	if a < max {
 		return max
+	}
+	return a
+}
+
+func min(a int32, min int32) int32 {
+	if a > min {
+		return min
 	}
 	return a
 }
