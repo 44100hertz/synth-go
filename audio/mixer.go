@@ -183,6 +183,15 @@ func (m *Mixer) startPair(i int) {
 	r := &m.Ch[i*2+1]
 	for {
 		switch l.PairMode {
+		case PAIR_SYNC:
+			// On new left osc cycle, new right osc cycle
+			if l.Phase+l.period >= l.Len {
+				r.Phase = 0
+			}
+			phase(l)
+			rwave := wave(r, phase(r))
+			m.chans[i] <- rwave
+			m.chans[i] <- rwave
 		case PAIR_PM:
 			// Use the wave of the left channel as the
 			// phase of the right one.
@@ -191,12 +200,14 @@ func (m *Mixer) startPair(i int) {
 			m.chans[i] <- rwave
 			m.chans[i] <- rwave
 		case PAIR_AM:
+			// Modulate amplitude of both waves
 			lwave := wave(l, phase(l))
 			rwave := wave(r, phase(r))
 			total := lwave * rwave >> 16
 			m.chans[i] <- total
 			m.chans[i] <- total
 		default:
+			// Straight stereo left/right
 			m.chans[i] <- wave(l, phase(l))
 			m.chans[i] <- wave(r, phase(r))
 		}
