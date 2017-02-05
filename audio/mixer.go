@@ -157,9 +157,8 @@ func (m *Mixer) tick() {
 
 // Run a pair of Chs
 func (m *Mixer) startPair(i int) {
-	phase := func(c *Channel) uint32 {
+	phase := func(c *Channel) {
 		c.Phase = (c.Phase + c.period) % c.Len
-		return c.Phase
 	}
 	wave := func(c *Channel, phase uint32) int32 {
 		// Calculate delay
@@ -189,27 +188,33 @@ func (m *Mixer) startPair(i int) {
 				r.Phase = 0
 			}
 			phase(l)
-			rwave := wave(r, phase(r))
+			phase(r)
+			rwave := wave(r, r.Phase)
 			m.chans[i] <- rwave
 			m.chans[i] <- rwave
 		case PAIR_PM:
 			// Use the wave of the left channel as the
 			// phase of the right one.
-			lwave := uint32(wave(l, phase(l))) + 0x8000
+			phase(l)
+			lwave := uint32(wave(l, l.Phase)) + 0x8000
 			rwave := wave(r, lwave)
 			m.chans[i] <- rwave
 			m.chans[i] <- rwave
 		case PAIR_AM:
 			// Modulate amplitude of both waves
-			lwave := wave(l, phase(l))
-			rwave := wave(r, phase(r))
+			phase(l)
+			phase(r)
+			lwave := wave(l, l.Phase)
+			rwave := wave(r, r.Phase)
 			total := lwave * rwave >> 16
 			m.chans[i] <- total
 			m.chans[i] <- total
 		default:
 			// Straight stereo left/right
-			m.chans[i] <- wave(l, phase(l))
-			m.chans[i] <- wave(r, phase(r))
+			phase(l)
+			phase(r)
+			m.chans[i] <- wave(l, l.Phase)
+			m.chans[i] <- wave(r, r.Phase)
 		}
 	}
 }
