@@ -31,10 +31,10 @@ type Mixer struct {
 }
 
 const (
-	PAIR_STEREO = iota
-	PAIR_PM
-	PAIR_AM
-	PAIR_SYNC
+	PAIR_STEREO = iota // Simple left and right channels
+	PAIR_PM            // Phase modulation
+	PAIR_AM            // Amplitude modulation
+	PAIR_SYNC          // Phase of left osc overflow = reset phase of right
 )
 
 // Internal channel data
@@ -74,7 +74,7 @@ func NewMixer(wave func(int, uint32) int16, seq func(*Mixer)) Mixer {
 	// Default params
 	for i := range m.Ch {
 		c := &m.Ch[i]
-		c.MVol = 0x4000
+		c.MVol = 0x8000
 		c.Note = 60 << 16
 		c.Len = 0x10000
 	}
@@ -130,7 +130,7 @@ func (m *Mixer) tick() {
 		// Set delay amount
 		dn, ok := c.DelayNote.(int32)
 		if ok {
-			c.delay = uint16(float64(m.srate) / getNote(dn))
+			c.delay = uint16(float64(m.srate) / Note(dn))
 			c.DelayNote = nil
 			c.delayAvg = 0
 		}
@@ -149,7 +149,7 @@ func (m *Mixer) tick() {
 		}
 
 		// Set pitch
-		c.period = uint32(float64(c.Len/m.srate) * getNote(c.Note))
+		c.period = uint32(float64(c.Len/m.srate) * Note(c.Note))
 	}
 	m.nextTick = 60*m.srate/m.Bpm/m.TickRate + m.count
 	m.tickCount++
@@ -187,9 +187,15 @@ func (m *Mixer) startPair(i int) {
 			// Use the wave of the left channel as the
 			// phase of the right one.
 			lwave := uint32(wave(l, phase(l))) + 0x8000
-			wave := wave(r, lwave)
-			m.chans[i] <- wave
-			m.chans[i] <- wave
+			rwave := wave(r, lwave)
+			m.chans[i] <- rwave
+			m.chans[i] <- rwave
+		case PAIR_AM:
+			lwave := wave(l, phase(l))
+			rwave := wave(r, phase(r))
+			total := lwave * rwave >> 16
+			m.chans[i] <- total
+			m.chans[i] <- total
 		default:
 			m.chans[i] <- wave(l, phase(l))
 			m.chans[i] <- wave(r, phase(r))
@@ -197,7 +203,7 @@ func (m *Mixer) startPair(i int) {
 	}
 }
 
-func getNote(note int32) float64 {
+func Note(note int32) float64 {
 	fnote := float64(note) / (1 << 16)
 	return math.Pow(2, (fnote-69)/12.0) * 440
 }
