@@ -3,30 +3,33 @@ package main
 import "./audio"
 
 func main() {
-	//	counter := int32(120)
+	counter := int32(0)
 	seq := func(m *audio.Mixer) {
-		//		m.OnPair(0, func(c *audio.Channel) {
-		//			if counter%6 == 0 {
-		//				c.Note = (counter << 16) * 16 / 19 / 3
-		//				c.Vol = 0x8000
-		//				m.Ch[1].Note = counter
-		//			}
-		//		})
-		//		counter++
+		m.OnPair(0, func(c *audio.Channel) {
+			if counter%6 == 0 {
+				note := (counter / 4) << 16
+				//				c.Note = note / 2
+				c.DelayNote = note
+			}
+		})
+		counter++
 	}
 	m := audio.NewMixer(audio.Waves, seq)
 	m.OnPair(0, func(c *audio.Channel) {
-		//		c.DelayVol = 0x8000 // A bit of delay attenuation
-		//		c.Filter = 0x5      // Use a delay averaged by 3 samples
-		//		c.Wave = 0
-		c.Vol = 0x8000
+		//c.Vol = 0x8000 // Full volume (single channel)
+		// c.Note = 1            // C#-0 as base note
+		// c.DelayLevel = 0xFFF0 // A bit of delay attenuation
+		// c.Filter = 0x3        // Use a delay averaged by 3 samples
+		c.Wave = audio.WAVE_QSINE
+		c.Fade = -0x1000
+		c.Note = 1
+		c.DelayVol = 0x8000
+		c.DelayLoop = 0x11000
+		c.DelayNote = 48 << 16
+		c.FilterLen = 0x4
 	})
 
-	m.Ch[0].PairMode = audio.PAIR_SYNC
-	m.Ch[0].Note = 60 << 16
-	m.Ch[1].Wave = audio.WAVES_SINE
-	m.Ch[1].Note = 48 << 16
-	m.Ch[1].Slide = 0x400
+	m.Bpm = 300
 	audio.Start(&m)
 	//audio.WaveOut(&m, "out.raw", 48000)
 }
