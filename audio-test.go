@@ -1,17 +1,10 @@
 package main
 
 import "./audio"
-import "fmt"
 
 func main() {
-	counter := 0
 	seq := func(m *audio.Mixer) {
 		m.OnPair(0, func(c *audio.Channel) {
-			counter++
-			if counter == 60 {
-				c.NoteOn = false
-				fmt.Println("off")
-			}
 		})
 	}
 	m := audio.NewMixer(audio.Waves, seq)
@@ -19,10 +12,12 @@ func main() {
 		//c.Note = 1            // C#-0 as base note
 		c.Wave = audio.WaveQSine
 		c.NoteOn = true
-		c.Attack = 0x1000
-		c.Decay = 0x1000
+		c.Attack = 0x400
+		c.Decay = 0x400
 		c.Sustain = 0x4000
-		c.Release = 0x500
+		c.Release = 0x200
+		c.Tremolo = (1 << 16) / 4
+		c.TremoloRate = (1 << 32) / 8
 		// c.DelayVol = 0x8000
 		// c.DelayLoop = 0x11000
 		// c.DelayNote = 48 << 16

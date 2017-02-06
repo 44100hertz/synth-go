@@ -10,6 +10,10 @@
  * Amplitude values are 100% at 0x10000 or 1<<16.
  * Many are signed, but below-zero values can have undefined behavior.
  * Using more int32's just makes things easier in the long run.
+ *
+ * This works on "ticks", much like a tracker. While points are calculated
+ * ~48k times a second (depends on machine), many things are only recalculated
+ * several times a beat, because it's economical and often even musical.
  */
 
 package audio
@@ -58,11 +62,11 @@ type Channel struct {
 	Len, Phase uint32 // Length of wave and position in wave
 	period     uint32 // How much to increment phase for each point
 
-	delay      uint16         // Length of a delay effect in samples
 	DelayTicks interface{}    // Length of delay in ticks
 	DelayNote  interface{}    // Special delay timing used for guitar pluck
 	DelayVol   int32          // Mixing level for delay effect
 	DelayLoop  int32          // Feedback mixing level for delay
+	delay      uint16         // Length of a delay effect in samples
 	FilterLen  uint16         // Rectangular filter added to delay
 	hist       [1 << 16]int32 // 64kb of channel history
 	histHead   uint16         // Current history location
@@ -74,6 +78,12 @@ type Channel struct {
 	Release int32 // Rate
 	EnvPos  int32 // How far into envelope in ticks
 	NoteOn  bool  // Whether or not to enter envelope release
+
+	Tremolo      int32 // Level of tremolo (volume LFO) effect
+	TremoloWave  int
+	TremoloRate  uint32 // How much to increase phase each tick
+	TremoloPhase uint32 // Keep track of phase to avoid clicks
+	tremoloOut   int32  // Current tremolo level
 }
 
 func NewMixer(wave func(int, uint32) int16, seq func(*Mixer)) Mixer {
@@ -158,15 +168,19 @@ func (m *Mixer) tick() {
 			// Decay
 			c.Vol = max(0, c.Vol-c.Decay)
 		}
-		c.EnvPos++
 		// Sustain doesn't change volume, so there's no code for it
+		c.EnvPos++
 
+		c.TremoloPhase += c.TremoloRate
+		c.tremoloOut = int32(m.wave(c.TremoloWave, c.TremoloPhase>>16)) *
+			c.Tremolo >> 16
+
+		// Find more useful, samplerate-independant delay amounts.
 		delayNote, ok := c.DelayNote.(int32)
 		if ok {
 			c.delay = uint16(float64(m.srate) / Note(delayNote))
 			c.DelayNote = nil
 		}
-
 		delayTicks, ok := c.DelayTicks.(uint32)
 		if ok {
 			c.delay = uint16(delayTicks * m.srate * 60 /
@@ -207,7 +221,7 @@ func (m *Mixer) startPair(i int) {
 		// Store history for delay effect
 		c.hist[c.histHead] = dry + c.delayAvg*c.DelayLoop>>16
 		c.histHead++
-		return dry*c.Vol>>16 + c.delayAvg*c.DelayVol>>16
+		return dry*(c.Vol+c.tremoloOut)>>16 + c.delayAvg*c.DelayVol>>16
 	}
 
 	l := &m.Ch[i*2]
