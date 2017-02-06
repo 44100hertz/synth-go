@@ -64,8 +64,9 @@ type Channel struct {
 
 	DelayTicks interface{}    // Length of delay in ticks
 	DelayNote  interface{}    // Special delay timing used for guitar pluck
-	DelayVol   int32          // Mixing level for delay effect
-	DelayLoop  int32          // Feedback mixing level for delay
+	DryLevel   int32          // Mixing level for wave
+	WetLevel   int32          // Mixing level for delay effect
+	Feedback   int32          // Feedback mixing level for delay
 	delay      uint16         // Length of a delay effect in samples
 	FilterLen  uint16         // Rectangular filter added to delay
 	hist       [1 << 16]int32 // 64kb of channel history
@@ -108,6 +109,7 @@ func NewMixer(wave func(int, uint32) int16, seq func(*Mixer)) Mixer {
 		c.MVol = 0x8000
 		c.Note = 60 << 16
 		c.Len = 0x10000
+		c.DryLevel = 0x10000
 	}
 	return m
 }
@@ -226,12 +228,13 @@ func (m *Mixer) startPair(i int) {
 		c.delayAvg = clamp16(c.delayAvg)
 
 		// Get a wave output
-		dry := int32(m.wave(c.Wave, phase))
+		dry := int32(m.wave(c.Wave, phase)) * (c.Vol + c.tremoloOut) >> 16
 
 		// Store history for delay effect
-		c.hist[c.histHead] = dry + c.delayAvg*c.DelayLoop>>16
+		c.hist[c.histHead] = dry + c.delayAvg*c.Feedback>>16
 		c.histHead++
-		return dry*(c.Vol+c.tremoloOut)>>16 + c.delayAvg*c.DelayVol>>16
+		return dry*c.DryLevel>>16 +
+			c.delayAvg*c.WetLevel>>16
 	}
 
 	l := &m.Ch[i*2]
