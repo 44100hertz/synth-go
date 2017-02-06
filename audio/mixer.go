@@ -73,8 +73,9 @@ type Channel struct {
 	delayAvg   int32          // Rolling average tracker for delay
 
 	Attack  int32 // Rate
+	Peak    int32 // Level that attack reaches
 	Decay   int32 // Rate
-	Sustain int32 // Level
+	Sustain int32 // Level that decay reaches
 	Release int32 // Rate
 	EnvPos  int32 // How far into envelope in ticks
 	NoteOn  bool  // Whether or not to enter envelope release
@@ -161,7 +162,7 @@ func (m *Mixer) tick() {
 		case !c.NoteOn:
 			// Note off
 			c.Vol = max(0, c.Vol-c.Release)
-		case c.EnvPos < 0x10000/c.Attack:
+		case c.EnvPos < c.Peak/c.Attack:
 			// Attack
 			c.Vol = min(0x10000, c.Vol+c.Attack)
 		case c.Vol > c.Sustain:
