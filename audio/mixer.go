@@ -219,7 +219,7 @@ func (m *Mixer) startPair(i int) {
 	// Update the internal channel and return a mixer-usable wave
 	wave := func(c *Channel, phase uint32) int32 {
 		// Calculate delay
-		var delayStart uint16 = c.histHead - c.delay
+		var delayStart uint16 = c.histHead - c.delay - 1
 		var delayEnd uint16 = delayStart - c.FilterLen
 		c.delayAvg += int32(c.hist[delayStart]) / int32(c.FilterLen)
 		c.delayAvg -= int32(c.hist[delayEnd]) / int32(c.FilterLen)
