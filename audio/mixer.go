@@ -80,11 +80,16 @@ type Channel struct {
 	EnvPos  int32 // How far into envelope in ticks
 	NoteOn  bool  // Whether or not to enter envelope release
 
-	Tremolo      int32 // Level of tremolo (volume LFO) effect
-	TremoloWave  int
+	Tremolo      int32  // Level of tremolo (volume LFO) effect
+	TremoloWave  int    // Waveform to use for tremolo
 	TremoloRate  uint32 // How much to increase phase each tick
 	TremoloPhase uint32 // Keep track of phase to avoid clicks
 	tremoloOut   int32  // Current tremolo level
+
+	Vibrato      int32 // Same, but pitch LFO
+	VibratoWave  int
+	VibratoRate  uint32
+	VibratoPhase uint32
 }
 
 func NewMixer(wave func(int, uint32) int16, seq func(*Mixer)) Mixer {
@@ -176,6 +181,10 @@ func (m *Mixer) tick() {
 		c.tremoloOut = int32(m.wave(c.TremoloWave, c.TremoloPhase>>16)) *
 			c.Tremolo >> 16
 
+		c.VibratoPhase += c.VibratoRate
+		vibratoOut := int32(m.wave(c.VibratoWave, c.VibratoPhase>>16)) *
+			c.Vibrato >> 16
+
 		// Find more useful, samplerate-independant delay amounts.
 		delayNote, ok := c.DelayNote.(int32)
 		if ok {
@@ -195,7 +204,7 @@ func (m *Mixer) tick() {
 		}
 
 		// Set pitch
-		c.period = uint32(float64(c.Len/m.srate) * Note(c.Note))
+		c.period = uint32(float64(c.Len/m.srate) * Note(c.Note+vibratoOut))
 	}
 	m.nextTick = 60*m.srate/m.BPM/m.TickRate + m.count
 	m.tickCount++
