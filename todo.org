@@ -15,20 +15,23 @@ SDL might have ways to make it more automatic. Currently some code
 duplication between wave out and SDL context out, as well.
 
 Sending two values thru channels might be a mistake.
-** TODO range checking
+** DONE range checking
 Go ahead, try delay a wave that doesn't get shut off. That has been
 fixed, clipping is intended for infinite feedback.
 
 There's probably some negatives that still need to be forced into
 being positive.
 
-** TODO more mixer functionality, e.g. what's in spec
+There really isn't any more range checking to do, sure there's
+undefined behavior but nothing possible within what's clearly intended
+can result in such behavior. Maybe it's even...usable for something.
+** DONE more mixer functionality, e.g. what's in spec
  - [X] Wave index, offset, length. Passed to wave callback, length used
    for looping.
  - [X] Volume, slide. Affects effects.
  - [X] Mixer Volume, slide. Applied after effects.
  - [X] Note Pitch, slide
- - [ ] LFO; level, speed, mode (volume(T), pitch(V), both, off)
+ - [X] LFO; level, speed, mode (volume(T), pitch(V), both, off)
  - [X] IIR pitch, slide, length 2^n, level
  - [X] Delay offset, volume
 *** TODO ADSR
